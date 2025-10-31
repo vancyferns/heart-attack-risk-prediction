@@ -1,50 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import axios from 'axios';
-import ExperienceCard from './components/ExperienceCard';
-import MapView from './components/MapView';
-import ExperienceDetails from './components/ExperienceDetails';
-import AIRecommender from './components/AIRecommender';
+import React, { useState } from 'react';
+import LoginForm from './components/LoginForm';
+import RegisterForm from './components/RegisterForm';
 import './App.css';
 
 function App() {
-  const [experiences, setExperiences] = useState([]);
+  const [isLoginView, setIsLoginView] = useState(true);
 
-  useEffect(() => {
-    axios.get('http://localhost:5000/api/experiences')
-      .then(response => {
-        setExperiences(response.data);
-      })
-      .catch(error => {
-        console.error("There was an error fetching the experiences!", error);
-      });
-  }, []);
+  const handleSwitch = (view) => {
+    setIsLoginView(view === 'login');
+  };
 
   return (
-    <Router>
-      <div className="App">
-        <header className="App-header">
-          <h1>🌴 Goa Guild 2.0</h1>
-          <p>Discover authentic experiences with local guides.</p>
-        </header>
-        <main>
-          <Routes>
-            <Route path="/" element={
-              <>
-                <AIRecommender />
-                <MapView />
-                <div className="card-grid">
-                  {experiences.map(exp => (
-                    <ExperienceCard key={exp._id} experience={exp} />
-                  ))}
-                </div>
-              </>
-            } />
-            <Route path="/experience/:id" element={<ExperienceDetails />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <div className="App">
+      {isLoginView ? (
+        <LoginForm onSwitchToRegister={() => handleSwitch('register')} />
+      ) : (
+        <RegisterForm onSwitchToLogin={() => handleSwitch('login')} />
+      )}
+    </div>
   );
 }
 
