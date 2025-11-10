@@ -1,50 +1,60 @@
-from mongoengine import Document, StringField, FloatField, IntField, DateTimeField, ReferenceField
-from flask_bcrypt import Bcrypt
+from mongoengine import (
+    Document,
+    StringField,
+    DateTimeField,
+    FloatField,
+    ReferenceField,
+    CASCADE
+)
 from datetime import datetime
-
-bcrypt = Bcrypt()
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- User Model ---
 class User(Document):
-    name = StringField(max_length=100, required=True)
-    email = StringField(max_length=120, required=True, unique=True)
-    password = StringField(max_length=128, required=True)
-    date = DateTimeField(default=datetime.utcnow)
-    
-    def set_password(self, password):
-        # Hashes the password securely
-        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+    name = StringField(required=True)
+    email = StringField(required=True, unique=True)
+    password = StringField(required=True)
 
-    def check_password(self, password):
+    def set_password(self, password: str):
+        # Hashes the password securely
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
         # Checks the provided password against the stored hash
-        return bcrypt.check_password_hash(self.password, password)
+        return check_password_hash(self.password, password)
 
 # --- Health Record Model (Prediction Data) ---
 class HealthRecord(Document):
-    user = ReferenceField(User, required=True) # Links the record to the User
+    user = ReferenceField(User, reverse_delete_rule=CASCADE, required=True) # Links the record to the User
+    date_submitted = DateTimeField(default=datetime.utcnow)
+    risk_score = FloatField(required=True)
+    prediction_result = StringField(required=True)
     
     # Core input features required for prediction (e.g., from Cleveland Heart Disease dataset)
-    age = IntField(required=True)
-    sex = IntField(required=True)  # 0: Female, 1: Male
-    cp = IntField(required=True)   # Chest Pain Type 
-    trestbps = IntField(required=True) # Resting Blood Pressure
-    chol = IntField(required=True)     # Serum Cholestoral
-    fbs = IntField(required=True)      # Fasting Blood Sugar
-    thalach = IntField(required=True)  # Maximum Heart Rate achieved
-    exang = IntField(required=True)    # Exercise Induced Angina (0=No, 1=Yes)
-    oldpeak = FloatField(required=True)  # ST depression
-    
-    # Prediction Results
-    risk_score = FloatField()          # The numerical probability (0.0 to 1.0)
-    prediction_result = StringField()  # Final interpretation (e.g., "High Risk")
-    date_submitted = DateTimeField(default=datetime.utcnow)
+    age = FloatField(required=True)
+    sex = FloatField(required=True)
+    cp = FloatField(required=True)
+    trestbps = FloatField(required=True)
+    chol = FloatField(required=True)
+    fbs = FloatField(required=True)
+    thalach = FloatField(required=True)
+    exang = FloatField(required=True)
+    oldpeak = FloatField(required=True)
     
     def to_dict(self):
         # Helper for sending JSON responses
         return {
-            '_id': str(self.id), # Use _id for MongoDB compatibility
-            'age': self.age,
+            'id': str(self.id),
+            'date_submitted': self.date_submitted.isoformat() if self.date_submitted else None,
             'risk_score': self.risk_score,
             'prediction_result': self.prediction_result,
-            'date_submitted': self.date_submitted.isoformat()
+            'age': self.age,
+            'sex': self.sex,
+            'cp': self.cp,
+            'trestbps': self.trestbps,
+            'chol': self.chol,
+            'fbs': self.fbs,
+            'thalach': self.thalach,
+            'exang': self.exang,
+            'oldpeak': self.oldpeak
         }

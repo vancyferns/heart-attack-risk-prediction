@@ -5,16 +5,11 @@ import os
 # --- IMPORTANT ---
 # Make sure your MongoDB server is running.
 # The default connection string is for a local MongoDB instance.
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 
 # Select the database
-db = client.goa_guild_hackathon
+db = client.heart_risk_prediction
 
 # Select the collections
-guides_col = db.guides
-experiences_col = db.experiences
-reviews_col = db.reviews
-bookings_col = db.bookings
-
-print("MongoDB connected successfully!")
+users_col = db.users

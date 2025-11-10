@@ -2,6 +2,7 @@ import jwt
 from flask import request, jsonify, current_app
 from functools import wraps
 from models import User # Import the User model
+import os
 
 def jwt_required(f):
     """
@@ -10,36 +11,36 @@ def jwt_required(f):
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
         token = None
-        
-        # 1. Check for token in 'Authorization: Bearer <token>' header
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ', 1)[1].strip()
+        elif auth_header:
+            token = auth_header.strip()
 
         if not token:
-            # 401: Unauthorized - Token is missing
-            return jsonify({'msg': 'Authorization Token is missing or improperly formatted'}), 401
-        
+            return jsonify({'msg': 'Token is missing'}), 401
+
         try:
-            # 2. Decode the token using the application's secret key
-            data = jwt.decode(
-                token, 
-                current_app.config['SECRET_KEY'],
-                algorithms=[current_app.config['JWT_ALGORITHM']]
+            payload = jwt.decode(
+                token,
+                os.getenv('JWT_SECRET_KEY', 'default_secret_key'),
+                algorithms=['HS256']
             )
-            
-            # 3. Find the user based on the decoded user_id
-            current_user = User.objects(id=data.get('user_id')).first()
+            user_id = payload.get('user_id')
+            if not user_id:
+                return jsonify({'msg': 'Invalid token payload'}), 401
+
+            current_user = User.objects(id=user_id).first()
             if not current_user:
-                return jsonify({'msg': 'User associated with token not found'}), 401
+                return jsonify({'msg': 'User not found'}), 401
 
         except jwt.ExpiredSignatureError:
             return jsonify({'msg': 'Token has expired'}), 401
         except jwt.InvalidTokenError:
-            return jsonify({'msg': 'Token is invalid or corrupted'}), 401
-        
-        # 4. Pass the authenticated user object to the route function
-        return f(current_user=current_user, *args, **kwargs)
+            return jsonify({'msg': 'Invalid token'}), 401
+        except Exception:
+            return jsonify({'msg': 'Token validation failed'}), 401
 
+        return f(current_user, *args, **kwargs)
     return decorated

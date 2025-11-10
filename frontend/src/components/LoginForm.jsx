@@ -1,14 +1,47 @@
 import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
+import axios from 'axios';
 
-const LoginForm = ({ onSwitchToRegister }) => {
+const API_BASE_URL = 'https://super-acorn-r4w75j6xp67435v9p-5000.app.github.dev/api/auth';
+
+const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(''); // State for error messages
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login attempt:', { email, password });
+    setError(''); 
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/login`, {
+        email,
+        password,
+      });
+
+      // Assuming backend returns { token: "..." }
+      const token = response.data.token;
+      
+      localStorage.setItem('token', token); 
+      onLoginSuccess(token); // Update global state
+      
+    } catch (err) {
+      // Handles 400/401 responses from the backend (e.g., 'Invalid Credentials')
+      const errorMessage = err.response?.data?.msg || 'Login failed. Check your network.';
+      
+      // Specifically target "user doesn't exist" (which comes as 'Invalid Credentials' from the backend)
+      if (errorMessage.includes('Invalid Credentials')) {
+        setError('Login failed. The email or password may be incorrect.');
+      } else {
+        setError(errorMessage);
+      }
+      
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -18,6 +51,9 @@ const LoginForm = ({ onSwitchToRegister }) => {
         <form className="auth-form" onSubmit={handleSubmit}>
           <h2>Login</h2>
           
+          {/* Display Error Message */}
+          {error && <p className="error-message">⚠️ {error}</p>}
+
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <input 
@@ -27,6 +63,7 @@ const LoginForm = ({ onSwitchToRegister }) => {
               onChange={(e) => setEmail(e.target.value)} 
               placeholder="Enter your email"
               required 
+              disabled={isLoading}
             />
           </div>
           
@@ -39,10 +76,13 @@ const LoginForm = ({ onSwitchToRegister }) => {
               onChange={(e) => setPassword(e.target.value)} 
               placeholder="Enter your password"
               required 
+              disabled={isLoading}
             />
           </div>
           
-          <button type="submit" className="submit-btn">Login</button>
+          <button type="submit" className="submit-btn" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
+          </button>
           
           <p className="switch-auth">
             Don't have an account? 

@@ -89,3 +89,32 @@
 .switch-auth span:hover {
     color: #ff0000;
 }
+
+/* --- Message Alert Styles --- */
+
+.error-message {
+    color: #8b0000; /* Dark red text */
+    background: #ffcccc; /* Light red background */
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid #8b0000;
+    font-weight: bold;
+}
+
+.success-message {
+    color: #006400; /* Dark green text */
+    background: #e6ffe6; /* Light green background */
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid #006400;
+    font-weight: bold;
+}
+
+.submit-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
