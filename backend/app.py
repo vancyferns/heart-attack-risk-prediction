@@ -13,7 +13,8 @@ from auth_middleware import jwt_required
 # Import models
 from models import User, HealthRecord
 
-load_dotenv()
+# Load the .env file from the backend folder explicitly to ensure local dev values are picked up
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
 # Initialize bcrypt
 bcrypt = Bcrypt()
@@ -21,7 +22,17 @@ bcrypt = Bcrypt()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    # Allow dev origins (both localhost and 127.0.0.1) for the frontend dev server.
+    # Using a resource pattern for /api/* keeps CORS limited to API endpoints.
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173",
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    }, supports_credentials=True)
 
     app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'default_secret_key')
     app.config['JWT_ALGORITHM'] = 'HS256'
@@ -30,14 +41,32 @@ def create_app():
     bcrypt.init_app(app)
 
     # Connect to MongoDB with error handling
+    # Connect ONLY to the configured MONGO_URI (Atlas or other remote DB).
+    # Fail fast and print clear guidance if connection fails.
+    MONGO_URI = os.getenv('MONGO_URI')
+    if not MONGO_URI:
+        raise RuntimeError(
+            "MONGO_URI is not set. Set MONGO_URI in backend/.env or as an environment variable to your MongoDB connection string (mongodb+srv://... for Atlas)."
+        )
+
     try:
-        MONGO_URI = os.getenv('MONGO_URI')
-        if not MONGO_URI:
-            raise ValueError("MONGO_URI environment variable is not set")
-        connect(host=MONGO_URI)
-        print("✅ MongoDB connection successful.")
+        # Print a short masked preview of the URI (avoid logging credentials)
+        preview = (MONGO_URI[:60] + '...') if len(MONGO_URI) > 60 else MONGO_URI
+        print(f"Attempting MongoDB connection using MONGO_URI: {preview}")
+        # Connect to the specific application database on the cluster so mongoengine
+        # uses the intended `heart_risk_prediction` database and collections.
+        # Use a moderate server selection timeout so failures surface quickly in dev
+        connect(db="heart_risk_prediction", host=MONGO_URI, serverSelectionTimeoutMS=10000)
+        print("✅ MongoDB connection successful (MONGO_URI).")
     except Exception as e:
-        print(f"❌ MongoDB connection failed: {str(e)}")
+        # Give actionable debugging tips for Atlas connection problems
+        print(f"❌ MongoDB connection to MONGO_URI failed: {e}")
+        print("Troubleshooting tips:")
+        print(" - Ensure the MONGO_URI in backend/.env is correct and contains username/password if required.")
+        print(" - If using MongoDB Atlas, add your IP address to the Network Access whitelist (or 0.0.0.0/0 for testing).")
+        print(" - Make sure 'dnspython' is installed (pip install dnspython) when using mongodb+srv URIs.")
+        print(" - Ensure outbound TLS connections are allowed by your network/firewall.")
+        raise
 
     # Simple health check
     @app.route('/', methods=['GET'])
@@ -53,45 +82,105 @@ def create_app():
 
     @app.route('/api/auth/register', methods=['POST'])
     def register():
-        data = request.get_json() or {}
-        required_fields = ['name', 'email', 'password']
+        try:
+            print("📝 Registration attempt - Processing request...")
+            data = request.get_json() or {}
+            required_fields = ['name', 'email', 'password']
 
-        if not all(field in data for field in required_fields):
-            return jsonify({'msg': 'Missing required fields'}), 400
+            # Log received data (excluding password)
+            safe_data = {k: v for k, v in data.items() if k != 'password'}
+            print(f"📨 Received registration data: {safe_data}")
 
-        email = data.get('email')
+            if not all(field in data for field in required_fields):
+                missing = [f for f in required_fields if f not in data]
+                print(f"❌ Registration failed - Missing fields: {missing}")
+                return jsonify({'msg': f'Missing required fields: {", ".join(missing)}'}), 400
 
-        if User.objects(email=email).first():
-            return jsonify({'msg': 'User already exists'}), 400
+            email = data.get('email')
+            
+            # Check if user exists
+            existing_user = User.objects(email=email).first()
+            if existing_user:
+                print(f"❌ Registration failed - Email already exists: {email}")
+                return jsonify({'msg': 'User already exists'}), 400
 
-        new_user = User(name=data.get('name'), email=email)
-        new_user.set_password(data.get('password'))
-        new_user.save()
+            # Create new user
+            print(f"👤 Creating new user with email: {email}")
+            new_user = User(name=data.get('name'), email=email)
+            new_user.set_password(data.get('password'))
+            
+            # Save user and verify it was saved
+            new_user.save()
+            saved_user = User.objects(email=email).first()
+            if not saved_user:
+                print("❌ Registration failed - User was not saved to database")
+                return jsonify({'msg': 'Failed to save user to database'}), 500
+            
+            print(f"✅ User successfully created with ID: {str(new_user.id)}")
 
-        token = jwt.encode(
-            {'user_id': str(new_user.id), 'exp': datetime.utcnow() + timedelta(days=1)},
-            app.config['SECRET_KEY'],
-            algorithm=app.config['JWT_ALGORITHM']
-        )
-        return jsonify({'token': token}), 201
-
-    @app.route('/api/auth/login', methods=['POST'])
-    def login():
-        data = request.get_json() or {}
-        email = data.get('email')
-        password = data.get('password')
-
-        user = User.objects(email=email).first()
-
-        if user and user.check_password(password):
+            # Generate token
             token = jwt.encode(
-                {'user_id': str(user.id), 'exp': datetime.utcnow() + timedelta(days=1)},
+                {'user_id': str(new_user.id), 'exp': datetime.utcnow() + timedelta(days=1)},
                 app.config['SECRET_KEY'],
                 algorithm=app.config['JWT_ALGORITHM']
             )
-            return jsonify({'token': token})
-        else:
-            return jsonify({'msg': 'Invalid Credentials'}), 401
+            
+            print("🎟️ JWT token generated successfully")
+            return jsonify({'token': token, 'msg': 'Registration successful'}), 201
+
+        except Exception as e:
+            print(f"❌ Registration failed - Unexpected error: {str(e)}")
+            # Re-raise to let the global error handler deal with it
+            raise
+
+    @app.route('/api/auth/login', methods=['POST'])
+    def login():
+        try:
+            print("🔐 Login attempt - Processing request...")
+            data = request.get_json() or {}
+            
+            # Validate required fields
+            if not data.get('email') or not data.get('password'):
+                print("❌ Login failed - Missing email or password")
+                return jsonify({'msg': 'Email and password are required'}), 400
+
+            email = data.get('email')
+            password = data.get('password')
+            
+            print(f"🔍 Looking up user with email: {email}")
+            user = User.objects(email=email).first()
+
+            if not user:
+                print(f"❌ Login failed - No user found with email: {email}")
+                return jsonify({'msg': 'Invalid email or password'}), 401
+
+            if user.check_password(password):
+                print(f"✅ Password verified for user: {email}")
+                token = jwt.encode(
+                    {
+                        'user_id': str(user.id),
+                        'email': user.email,
+                        'exp': datetime.utcnow() + timedelta(days=1)
+                    },
+                    app.config['SECRET_KEY'],
+                    algorithm=app.config['JWT_ALGORITHM']
+                )
+                print("🎟️ JWT token generated successfully")
+                return jsonify({
+                    'token': token,
+                    'user': {
+                        'id': str(user.id),
+                        'email': user.email,
+                        'name': user.name
+                    }
+                })
+            else:
+                print(f"❌ Login failed - Invalid password for user: {email}")
+                return jsonify({'msg': 'Invalid email or password'}), 401
+
+        except Exception as e:
+            print(f"❌ Login failed - Unexpected error: {str(e)}")
+            return jsonify({'msg': f'Login failed: {str(e)}'}), 500
 
     # ---------------------------------
     # --- RECORDS ROUTES (SECURED) ---
@@ -103,6 +192,13 @@ def create_app():
         # Filter records only for the current authenticated user
         records = HealthRecord.objects(user=current_user.id).order_by('-date_submitted')
         return jsonify([record.to_dict() for record in records])
+
+    # Generic exception handler that returns JSON so the frontend gets a meaningful
+    # response and CORS headers are applied even on unexpected errors.
+    @app.errorhandler(Exception)
+    def handle_global_exception(e):
+        # In debug mode Flask will still print the full traceback to console.
+        return jsonify({'msg': str(e)}), 500
 
     return app
 

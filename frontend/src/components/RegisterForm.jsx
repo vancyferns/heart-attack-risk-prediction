@@ -3,7 +3,7 @@ import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
 import axios from 'axios';
 
-const API_BASE_URL = 'https://super-acorn-r4w75j6xp67435v9p-5000.app.github.dev/api/auth';
+const API_BASE_URL = 'http://127.0.0.1:5000/api/auth';
 
 const RegisterForm = ({ onSwitchToLogin }) => {
   const [name, setName] = useState('');

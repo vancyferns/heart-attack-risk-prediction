@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- User Model ---
 class User(Document):
+    meta = {'collection': 'users'}
     name = StringField(required=True)
     email = StringField(required=True, unique=True)
     password = StringField(required=True)
@@ -25,6 +26,7 @@ class User(Document):
 
 # --- Health Record Model (Prediction Data) ---
 class HealthRecord(Document):
+    meta = {'collection': 'health_records'}
     user = ReferenceField(User, reverse_delete_rule=CASCADE, required=True) # Links the record to the User
     date_submitted = DateTimeField(default=datetime.utcnow)
     risk_score = FloatField(required=True)

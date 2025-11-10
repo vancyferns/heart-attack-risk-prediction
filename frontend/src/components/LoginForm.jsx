@@ -3,7 +3,7 @@ import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
 import axios from 'axios';
 
-const API_BASE_URL = 'https://super-acorn-r4w75j6xp67435v9p-5000.app.github.dev/api/auth';
+const API_BASE_URL = 'http://127.0.0.1:5000/api/auth';
 
 const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
@@ -22,11 +22,14 @@ const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
         password,
       });
 
-      // Assuming backend returns { token: "..." }
-      const token = response.data.token;
+      const { token, user } = response.data;
       
-      localStorage.setItem('token', token); 
-      onLoginSuccess(token); // Update global state
+      // Store both token and user info
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Pass both token and user to the success handler
+      onLoginSuccess(token, user);
       
     } catch (err) {
       // Handles 400/401 responses from the backend (e.g., 'Invalid Credentials')
