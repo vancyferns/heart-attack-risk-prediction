@@ -1,38 +1,23 @@
 /* AnimatedBackground.css */
-
 .animated-background {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
+    top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
     
-    background: linear-gradient(135deg, #FF6B6B, #DE3545, #8B0000, #FFD1DC);
-    background-size: 400% 400%;
-    animation: heartbeatGradientShift 15s ease infinite;
-               opacityHeartbeat 2s ease-in-out infinite alternate;
+    /* Rich Blue Palette */
+    background: linear-gradient(
+        125deg, 
+        #E1F5FE 0%, 
+        #4FC3F7 30%, 
+        #00BCD4 50%, 
+        #4FC3F7 70%, 
+        #E1F5FE 100%
+    );
+    background-size: 300% 300%;
+    
+    animation: auroraFlow 3s ease-in-out infinite alternate;
 }
 
-@keyframes heartbeatGradientShift {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-@keyframes opacityHeartbeat {
-    0%, 100% {
-        filter: brightness(1);
-        opacity: 0.9;
-    }
-    50% {
-        filter: brightness(1.2);
-        opacity: 1;
-    }
+@keyframes auroraFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
 }
