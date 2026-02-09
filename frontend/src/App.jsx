@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
+import Dashboard from './components/Dashboard';
+import LandingPage from './components/LandingPage';
 import './App.css';
 
 function App() {
-  const [isLoginView, setIsLoginView] = useState(true);
+  const [currentView, setCurrentView] = useState('landing'); // landing, login, register, dashboard
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -15,16 +17,14 @@ function App() {
     if (token && savedUser) {
       setIsAuthenticated(true);
       setUser(JSON.parse(savedUser));
+      setCurrentView('dashboard');
     }
   }, []);
-
-  const handleSwitch = (view) => {
-    setIsLoginView(view === 'login');
-  };
 
   const handleLoginSuccess = (token, userData) => {
     setIsAuthenticated(true);
     setUser(userData);
+    setCurrentView('dashboard');
   };
 
   const handleLogout = () => {
@@ -32,33 +32,42 @@ function App() {
     localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUser(null);
-    setIsLoginView(true);
+    setCurrentView('landing');
   };
 
-  if (isAuthenticated && user) {
+  // Dashboard view when authenticated
+  if (isAuthenticated && user && currentView === 'dashboard') {
     return (
-      <div className="App">
-        <div className="dashboard">
-          <h1>Welcome, {user.name}!</h1>
-          <button onClick={handleLogout}>Logout</button>
-          {/* Add your dashboard content here */}
-        </div>
-      </div>
+      <Dashboard 
+        user={user}
+        onLogout={handleLogout}
+      />
     );
   }
 
+  // Landing page view
+  if (currentView === 'landing') {
+    return (
+      <LandingPage 
+        onSignIn={() => setCurrentView('login')}
+        onSignUp={() => setCurrentView('register')}
+      />
+    );
+  }
+
+  // Authentication views
   return (
     <div className="App">
-      {isLoginView ? (
+      {currentView === 'login' ? (
         <LoginForm 
-          onSwitchToRegister={() => handleSwitch('register')}
+          onSwitchToRegister={() => setCurrentView('register')}
           onLoginSuccess={handleLoginSuccess}
         />
-      ) : (
+      ) : currentView === 'register' ? (
         <RegisterForm 
-          onSwitchToLogin={() => handleSwitch('login')}
+          onSwitchToLogin={() => setCurrentView('login')}
         />
-      )}
+      ) : null}
     </div>
   );
 }

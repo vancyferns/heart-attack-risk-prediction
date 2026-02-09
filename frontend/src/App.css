@@ -1,13 +1,124 @@
 html, body, #root, .App {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: transparent; 
-    overflow: hidden; 
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+  overflow: hidden;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .App-header {
-    position: relative;
-    z-index: 2;
+  position: relative;
+  z-index: 2;
+}
+
+/* Auth Views */
+.auth-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: #f5f7fa;
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 280px;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f5f7fa;
+}
+
+.sidebar.closed ~ .dashboard-content {
+  margin-left: 80px;
+}
+
+/* Landing Page */
+.landing-page {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: #f8f9fa;
+}
+
+/* Global Button Styles */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(179,58,58,0.18);
+}
+
+.btn-secondary {
+  background: white;
+  color: #b33a3a;
+  border: 2px solid #b33a3a;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #b33a3a;
+  color: white;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-content {
+    margin-left: 0;
+    padding: 15px;
+  }
+
+  .sidebar.closed ~ .dashboard-content {
+    margin-left: 0;
+  }
 }

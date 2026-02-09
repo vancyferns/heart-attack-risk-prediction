@@ -28,6 +28,9 @@ def create_app():
         r"/api/*": {
             "origins": [
                 "http://localhost:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5174",
+                "http://127.0.0.1:5173"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
@@ -192,6 +195,37 @@ def create_app():
         # Filter records only for the current authenticated user
         records = HealthRecord.objects(user=current_user.id).order_by('-date_submitted')
         return jsonify([record.to_dict() for record in records])
+
+
+    @app.route('/api/records', methods=['POST'])
+    @jwt_required
+    def create_record(current_user):
+        try:
+            data = request.get_json() or {}
+            # require at least a risk score and prediction result
+            if 'risk_score' not in data or 'prediction_result' not in data:
+                return jsonify({'msg': 'risk_score and prediction_result are required'}), 400
+
+            # Build record using available fields (many are optional now)
+            record = HealthRecord(
+                user=current_user,
+                risk_score=float(data.get('risk_score')),
+                prediction_result=str(data.get('prediction_result')),
+                age=float(data.get('age')) if data.get('age') is not None else None,
+                sex=float(data.get('sex')) if data.get('sex') is not None else None,
+                cp=float(data.get('cp')) if data.get('cp') is not None else None,
+                trestbps=float(data.get('trestbps')) if data.get('trestbps') is not None else None,
+                chol=float(data.get('chol')) if data.get('chol') is not None else None,
+                fbs=float(data.get('fbs')) if data.get('fbs') is not None else None,
+                thalach=float(data.get('thalach')) if data.get('thalach') is not None else None,
+                exang=float(data.get('exang')) if data.get('exang') is not None else None,
+                oldpeak=float(data.get('oldpeak')) if data.get('oldpeak') is not None else None,
+                image_url=data.get('image_url')
+            )
+            record.save()
+            return jsonify(record.to_dict()), 201
+        except Exception as e:
+            return jsonify({'msg': str(e)}), 500
 
     # Generic exception handler that returns JSON so the frontend gets a meaningful
     # response and CORS headers are applied even on unexpected errors.

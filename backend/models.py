@@ -32,16 +32,19 @@ class HealthRecord(Document):
     risk_score = FloatField(required=True)
     prediction_result = StringField(required=True)
     
-    # Core input features required for prediction (e.g., from Cleveland Heart Disease dataset)
-    age = FloatField(required=True)
-    sex = FloatField(required=True)
-    cp = FloatField(required=True)
-    trestbps = FloatField(required=True)
-    chol = FloatField(required=True)
-    fbs = FloatField(required=True)
-    thalach = FloatField(required=True)
-    exang = FloatField(required=True)
-    oldpeak = FloatField(required=True)
+    # Core input features for prediction. Make optional so frontend can submit
+    # minimal records (some fields may be unavailable for eye-scan based flow).
+    age = FloatField(required=False)
+    sex = FloatField(required=False)
+    cp = FloatField(required=False)
+    trestbps = FloatField(required=False)
+    chol = FloatField(required=False)
+    fbs = FloatField(required=False)
+    thalach = FloatField(required=False)
+    exang = FloatField(required=False)
+    oldpeak = FloatField(required=False)
+    # Optional image / metadata field
+    image_url = StringField(required=False)
     
     def to_dict(self):
         # Helper for sending JSON responses
@@ -58,5 +61,6 @@ class HealthRecord(Document):
             'fbs': self.fbs,
             'thalach': self.thalach,
             'exang': self.exang,
-            'oldpeak': self.oldpeak
+            'oldpeak': self.oldpeak,
+            'image_url': getattr(self, 'image_url', None)
         }
