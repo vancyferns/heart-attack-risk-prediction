@@ -1,7 +1,41 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import '../assets/LandingPage.css';
 
 const LandingPage = ({ onSignIn, onSignUp }) => {
+  useEffect(() => {
+    AOS.init({
+      duration: 1000,
+      once: true,
+      offset: 100,
+    });
+  }, []);
+
+  const handleLearnMore = () => {
+    const featuresSection = document.querySelector('.features-section');
+    if (featuresSection) {
+      featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleFooterLink = (linkType) => {
+    const scrollTargets = {
+      features: '.features-section',
+      flow: '.flow-section',
+      benefits: '.benefits-section'
+    };
+
+    if (scrollTargets[linkType]) {
+      const element = document.querySelector(scrollTargets[linkType]);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      alert(`${linkType.charAt(0).toUpperCase() + linkType.slice(1)} page would open here.`);
+    }
+  };
+
   return (
     <div className="landing-page">
       {/* Navigation Bar */}
@@ -24,7 +58,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
       <section className="hero-section">
         <div className="hero-content">
           <h1 className="hero-title">
-            Advanced Eye Scan Technology for Heart Health Monitoring
+            Transforming Heart Care Through Eye Analysis
           </h1>
           <p className="hero-subtitle">
             Detect heart attack risks through innovative ophthalmology analysis and AI-powered predictions
@@ -33,7 +67,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
             <button className="btn btn-hero btn-primary" onClick={onSignUp}>
               Get Started Now
             </button>
-            <button className="btn btn-hero btn-secondary">
+            <button className="btn btn-hero btn-secondary" onClick={handleLearnMore}>
               Learn More
             </button>
           </div>
@@ -48,9 +82,8 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
       </section>
 
       {/* Features Section */}
-      <section className="features-section">
-        <h2>How It Works</h2>
-        <div className="features-grid">
+      <section className="features-section" data-aos="fade-up">
+        <div className="features-grid" data-aos="fade-up" data-aos-delay="200">
           <div className="feature-card">
             <div className="feature-number">1</div>
             <div className="feature-icon">👤</div>
@@ -137,9 +170,9 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
         </div>
       </section>
 
-      {/* Application Flow Section */}
+      {/* How It Works Section */}
       <section className="flow-section">
-        <h2>Application Flow</h2>
+        <h2>How It Works</h2>
         <div className="flow-diagram">
           <div className="flow-step">
             <div className="flow-icon">🔐</div>
@@ -243,26 +276,6 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
         </div>
       </section>
 
-      {/* Statistics Section */}
-      <section className="statistics-section">
-        <div className="stat-card">
-          <div className="stat-number">10K+</div>
-          <p>Patients Analyzed</p>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">500+</div>
-          <p>Hospitals & Clinics</p>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">92%</div>
-          <p>Prediction Accuracy</p>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">24/7</div>
-          <p>Support Available</p>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="cta-section">
         <h2>Ready to Get Started?</h2>
@@ -287,25 +300,25 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
           <div className="footer-section">
             <h4>Quick Links</h4>
             <ul>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#flow">How It Works</a></li>
-              <li><a href="#benefits">Benefits</a></li>
+              <li><a onClick={() => handleFooterLink('features')}>Features</a></li>
+              <li><a onClick={() => handleFooterLink('flow')}>How It Works</a></li>
+              <li><a onClick={() => handleFooterLink('benefits')}>Benefits</a></li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>Support</h4>
             <ul>
-              <li><a href="#contact">Contact Us</a></li>
-              <li><a href="#help">Help Center</a></li>
-              <li><a href="#privacy">Privacy Policy</a></li>
+              <li><a onClick={() => handleFooterLink('contact')}>Contact Us</a></li>
+              <li><a onClick={() => handleFooterLink('help')}>Help Center</a></li>
+              <li><a onClick={() => handleFooterLink('privacy')}>Privacy Policy</a></li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>Legal</h4>
             <ul>
-              <li><a href="#terms">Terms of Service</a></li>
-              <li><a href="#privacy">Privacy Policy</a></li>
-              <li><a href="#disclaimer">Disclaimer</a></li>
+              <li><a onClick={() => handleFooterLink('terms')}>Terms of Service</a></li>
+              <li><a onClick={() => handleFooterLink('privacy')}>Privacy Policy</a></li>
+              <li><a onClick={() => handleFooterLink('disclaimer')}>Disclaimer</a></li>
             </ul>
           </div>
         </div>

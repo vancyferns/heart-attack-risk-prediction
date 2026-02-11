@@ -1,7 +1,7 @@
 /* Landing Page Styles */
 .landing-page {
   width: 100%;
-  background: #f8f9fa;
+  background: white;
 }
 
 /* Navigation Bar */
@@ -175,7 +175,7 @@
 
 /* Features Section */
 .features-section {
-  padding: 80px 40px;
+  padding: 40px 40px;
   background: white;
 }
 
@@ -183,7 +183,7 @@
   text-align: center;
   font-size: 2.5em;
   color: #2d3748;
-  margin-bottom: 60px;
+  margin-bottom: 30px;
 }
 
 .features-grid {
@@ -269,7 +269,7 @@
 
 /* Flow Section */
 .flow-section {
-  padding: 80px 40px;
+  padding: 40px 40px;
   background: linear-gradient(135deg, #ff7b7b15 0%, #b33a3a15 100%);
 }
 
@@ -277,7 +277,7 @@
   text-align: center;
   font-size: 2.5em;
   color: #2d3748;
-  margin-bottom: 60px;
+  margin-bottom: 30px;
 }
 
 .flow-diagram {
@@ -330,7 +330,7 @@
 
 /* Key Features Section */
 .key-features-section {
-  padding: 80px 40px;
+  padding: 40px 40px;
   background: white;
 }
 
@@ -338,7 +338,7 @@
   text-align: center;
   font-size: 2.5em;
   color: #2d3748;
-  margin-bottom: 60px;
+  margin-bottom: 30px;
 }
 
 .key-features-grid {
@@ -381,7 +381,7 @@
 
 /* Benefits Section */
 .benefits-section {
-  padding: 80px 40px;
+  padding: 40px 40px;
   background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
   color: white;
 }
@@ -389,7 +389,7 @@
 .benefits-section h2 {
   text-align: center;
   font-size: 2.5em;
-  margin-bottom: 60px;
+  margin-bottom: 30px;
 }
 
 .benefits-container {
@@ -435,7 +435,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 30px;
-  padding: 80px 40px;
+  padding: 40px 40px;
   background: white;
   max-width: 1200px;
   margin: 0 auto;
@@ -469,7 +469,7 @@
 
 /* CTA Section */
 .cta-section {
-  padding: 100px 40px;
+  padding: 60px 40px;
   background: linear-gradient(135deg, #ff7b7b15 0%, #b33a3a15 100%);
   text-align: center;
 }
@@ -543,6 +543,7 @@
   color: #a0aec0;
   text-decoration: none;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .footer-section a:hover {

@@ -3,7 +3,7 @@ import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:5000/api/auth';
+const API_BASE_URL = 'http://localhost:5000/api/auth';
 
 const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
   const [email, setEmail] = useState('');

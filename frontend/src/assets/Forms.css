@@ -8,13 +8,14 @@
     padding: 20px;
     z-index: 10;
     position: relative;
+    background: linear-gradient(135deg, #FEF5F7 0%, #FFF9FB 100%);
 }
 
 .auth-form {
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(255, 255, 255, 0.95);
     padding: 40px;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(235, 235, 235, 0.2);
+    box-shadow: 0 4px 20px rgba(224, 117, 160, 0.2);
     width: 100%;
     max-width: 400px;
     backdrop-filter: blur(5px);
@@ -22,7 +23,7 @@
 
 .auth-form h2 {
     text-align: center;
-    color: #3c77c9;
+    color: #E075A0;
     margin-bottom: 30px;
     font-size: 1.8em;
 }
@@ -35,7 +36,7 @@
     display: block;
     margin-bottom: 8px;
     font-weight: bold;
-    color: #ffffff;
+    color: #333333;
 }
 
 .form-group input {
@@ -48,16 +49,16 @@
 }
 
 .form-group input:focus {
-    border-color: #4171b5;
+    border-color: #E075A0;
     outline: none;
-    box-shadow: 0 0 5px rgba(66, 74, 177, 0.5);
+    box-shadow: 0 0 5px rgba(224, 117, 160, 0.5);
 }
 
 .submit-btn {
     width: 100%;
     padding: 12px;
-    background-color: #ffffff;
-    color: rgb(0, 0, 0);
+    background-color: #E075A0;
+    color: #ffffff;
     border: none;
     border-radius: 8px;
     font-size: 1.1em;
@@ -68,17 +69,17 @@
 }
 
 .submit-btn:hover {
-    background-color: #3766a7;
+    background-color: #D97B94;
 }
 
 .switch-auth {
     text-align: center;
     margin-top: 20px;
-    color: #f8f8f8;
+    color: #666666;
 }
 
 .switch-auth span {
-    color: #ffffff;
+    color: #E075A0;
     font-weight: bold;
     cursor: pointer;
     margin-left: 5px;
@@ -87,7 +88,7 @@
 }
 
 .switch-auth span:hover {
-    color: #185bb8;
+    color: #D97B94;
 }
 
 /* --- Message Alert Styles --- */
