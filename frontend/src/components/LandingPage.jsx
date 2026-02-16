@@ -81,94 +81,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="features-section" data-aos="fade-up">
-        <div className="features-grid" data-aos="fade-up" data-aos-delay="200">
-          <div className="feature-card">
-            <div className="feature-number">1</div>
-            <div className="feature-icon">👤</div>
-            <h3>Registration & Login</h3>
-            <p>Ophthalmologists register and securely log in with their credentials</p>
-            <div className="feature-details">
-              <ul>
-                <li>Email verification</li>
-                <li>Secure password authentication</li>
-                <li>Professional account setup</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-number">2</div>
-            <div className="feature-icon">📝</div>
-            <h3>Patient Registration</h3>
-            <p>Enter comprehensive patient information for accurate analysis</p>
-            <div className="feature-details">
-              <ul>
-                <li>Patient demographics</li>
-                <li>Medical history</li>
-                <li>Contact information</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-number">3</div>
-            <div className="feature-icon">📸</div>
-            <h3>Eye Scan Upload</h3>
-            <p>Upload high-quality eye scan images for analysis</p>
-            <div className="feature-details">
-              <ul>
-                <li>Multiple format support</li>
-                <li>Drag & drop interface</li>
-                <li>Image validation</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-number">4</div>
-            <div className="feature-icon">🔍</div>
-            <h3>AI Analysis</h3>
-            <p>Advanced algorithms analyze eye scans for heart disease indicators</p>
-            <div className="feature-details">
-              <ul>
-                <li>Real-time processing</li>
-                <li>Deep learning models</li>
-                <li>High accuracy</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-number">5</div>
-            <div className="feature-icon">📊</div>
-            <h3>Risk Assessment</h3>
-            <p>Get detailed heart attack risk predictions with confidence scores</p>
-            <div className="feature-details">
-              <ul>
-                <li>Risk categorization</li>
-                <li>Confidence metrics</li>
-                <li>Visual indicators</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-number">6</div>
-            <div className="feature-icon">📥</div>
-            <h3>Report Download</h3>
-            <p>Download comprehensive medical reports for patient records</p>
-            <div className="feature-details">
-              <ul>
-                <li>PDF generation</li>
-                <li>Detailed analysis</li>
-                <li>Medical recommendations</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* How It Works Section */}
       <section className="flow-section">
@@ -212,42 +125,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
         </div>
       </section>
 
-      {/* Key Features Section */}
-      <section className="key-features-section">
-        <h2>Key Features</h2>
-        <div className="key-features-grid">
-          <div className="key-feature">
-            <div className="kf-icon">🎯</div>
-            <h4>High Accuracy</h4>
-            <p>92%+ accuracy in heart disease prediction using advanced AI models</p>
-          </div>
-          <div className="key-feature">
-            <div className="kf-icon">⚡</div>
-            <h4>Fast Processing</h4>
-            <p>Real-time analysis results within seconds of image upload</p>
-          </div>
-          <div className="key-feature">
-            <div className="kf-icon">🔒</div>
-            <h4>HIPAA Compliant</h4>
-            <p>Enterprise-grade security for patient data protection</p>
-          </div>
-          <div className="key-feature">
-            <div className="kf-icon">📱</div>
-            <h4>Responsive Design</h4>
-            <p>Works seamlessly across all devices and screen sizes</p>
-          </div>
-          <div className="key-feature">
-            <div className="kf-icon">📈</div>
-            <h4>Analytics Dashboard</h4>
-            <p>Track patient history and trends over time</p>
-          </div>
-          <div className="key-feature">
-            <div className="kf-icon">🤝</div>
-            <h4>Easy Integration</h4>
-            <p>Seamless integration with existing medical systems</p>
-          </div>
-        </div>
-      </section>
+      
 
       {/* Benefits Section */}
       <section className="benefits-section">
