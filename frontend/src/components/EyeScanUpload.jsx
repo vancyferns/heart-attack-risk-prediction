@@ -75,57 +75,68 @@ const EyeScanUpload = ({ onSubmit, patientData }) => {
     }
 
     setIsAnalyzing(true);
-    // Simulate analysis then POST record to backend
-    setTimeout(async () => {
-      const mockResults = {
-        riskLevel: 'High',
-        riskScore: 78,
-        confidence: 92,
-        message: 'The eye scan indicates elevated risk indicators',
-        recommendations: [
+    setError('');
+
+    // Create FormData to send image to backend
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const token = localStorage.getItem('token');
+
+    // Call the real ML prediction endpoint
+    axios.post(`${API_BASE}/predict/image`, formData, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    .then(res => {
+      const prediction = res.data.prediction;
+      
+      // Generate recommendations based on risk level
+      let recommendations = [];
+      if (prediction.risk_level === 'High') {
+        recommendations = [
           'Immediate consultation with cardiologist recommended',
           'Schedule comprehensive cardiac assessment',
-          'Monitor blood pressure regularly'
-        ]
-      };
-
-      // Prepare payload for backend /api/records
-      const token = localStorage.getItem('token');
-      const payload = {
-        risk_score: mockResults.riskScore,
-        prediction_result: mockResults.riskLevel,
-        // Map patient fields when available
-        age: patientData?.age || null,
-        // Other numeric features are not available from eye-scan flow; leave null
-        image_url: null
-      };
-
-      try {
-        const res = await axios.post(`${API_BASE}/records`, payload, {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : ''
-          }
-        });
-
-        // Map backend record to the Results component shape
-        const saved = res.data;
-        const mapped = {
-          riskLevel: saved.prediction_result || mockResults.riskLevel,
-          riskScore: saved.risk_score || mockResults.riskScore,
-          confidence: mockResults.confidence,
-          message: mockResults.message,
-          recommendations: mockResults.recommendations,
-          _recordId: saved.id
-        };
-
-        onSubmit(mapped);
-      } catch (err) {
-        console.error('Failed to save record:', err?.response?.data || err.message);
-        setError('Failed to save analysis. Try again.');
-      } finally {
-        setIsAnalyzing(false);
+          'Monitor blood pressure regularly',
+          'Consider stress test and ECG'
+        ];
+      } else if (prediction.risk_level === 'Medium') {
+        recommendations = [
+          'Schedule routine cardiac check-up',
+          'Maintain healthy lifestyle habits',
+          'Monitor cholesterol levels',
+          'Regular exercise recommended'
+        ];
+      } else {
+        recommendations = [
+          'Continue maintaining healthy lifestyle',
+          'Annual health check-up recommended',
+          'Keep monitoring vital signs',
+          'Stay physically active'
+        ];
       }
-    }, 1200);
+
+      // Map backend prediction to the Results component shape
+      const results = {
+        riskLevel: prediction.risk_level,
+        riskScore: prediction.risk_score,
+        confidence: prediction.confidence,
+        message: `Eye scan analysis indicates ${prediction.risk_level.toLowerCase()} risk for heart disease`,
+        recommendations: recommendations,
+        _recordId: res.data.record_id
+      };
+
+      onSubmit(results);
+    })
+    .catch(err => {
+      console.error('Prediction failed:', err?.response?.data || err.message);
+      setError(err?.response?.data?.msg || 'Analysis failed. Please try again or check if models are loaded.');
+    })
+    .finally(() => {
+      setIsAnalyzing(false);
+    });
   };
 
   return (

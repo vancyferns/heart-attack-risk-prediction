@@ -8,3 +8,9 @@ joblib
 PyJWT
 werkzeug
 flask-bcrypt
+torch
+torchvision
+xgboost
+pillow
+numpy
+scikit-learn
