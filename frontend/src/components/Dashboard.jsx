@@ -293,16 +293,39 @@ const HistoryView = ({ onBack }) => {
     const fetchRecords = async () => {
       setLoading(true);
       const token = localStorage.getItem('token');
+      
+      console.log('🔍 Fetching records with token:', token ? 'Token exists' : 'No token found');
+      
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
       try {
         const res = await fetch('http://127.0.0.1:5000/api/records', {
-          headers: { Authorization: token ? `Bearer ${token}` : '' }
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
-        if (!res.ok) throw new Error(`Status ${res.status}`);
+        
+        if (!res.ok) {
+          const errorData = await res.text();
+          console.error('❌ Fetch error:', res.status, errorData);
+          throw new Error(`Status ${res.status}: ${errorData}`);
+        }
+        
         const data = await res.json();
+        console.log('✅ Records fetched:', data.length);
         setRecords(data);
       } catch (err) {
-        setError('Failed to load history');
-        console.error(err);
+        console.error('❌ Error fetching records:', err);
+        if (err.message.includes('401')) {
+          setError('Session expired. Please log in again.');
+        } else {
+          setError('Failed to load history');
+        }
       } finally {
         setLoading(false);
       }

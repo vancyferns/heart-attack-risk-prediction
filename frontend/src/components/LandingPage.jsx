@@ -178,7 +178,6 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
           <div className="footer-section">
             <h4>Quick Links</h4>
             <ul>
-             
               <li><a onClick={() => handleFooterLink('flow')}>How It Works</a></li>
               <li><a onClick={() => handleFooterLink('benefits')}>Benefits</a></li>
             </ul>

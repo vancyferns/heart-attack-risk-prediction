@@ -6,6 +6,7 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from mongoengine import connect
+from werkzeug.utils import secure_filename
 
 # Import the JWT verification decorator from the middleware file
 from auth_middleware import jwt_required
@@ -48,6 +49,12 @@ def create_app():
 
     app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'default_secret_key')
     app.config['JWT_ALGORITHM'] = 'HS256'
+    
+    # Configure upload folder for images
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
     # Initialize bcrypt with the app
     bcrypt.init_app(app)
@@ -260,18 +267,29 @@ def create_app():
             if image_file.filename == '':
                 return jsonify({'msg': 'No image file selected'}), 400
             
-            # Read image bytes
-            image_bytes = image_file.read()
+            # Save the uploaded image to disk
+            original_filename = secure_filename(image_file.filename)
+            timestamp = datetime.utcnow().timestamp()
+            # Create unique filename with timestamp
+            filename = f"{current_user.id}_{timestamp}_{original_filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Save file to uploads folder
+            image_file.save(filepath)
+            
+            # Read image bytes for prediction
+            with open(filepath, 'rb') as f:
+                image_bytes = f.read()
             
             # Make prediction
             prediction = predict_from_image(image_bytes)
             
-            # Save to database
+            # Save to database with actual file path
             record = HealthRecord(
                 user=current_user,
                 risk_score=prediction['risk_score'],
                 prediction_result=prediction['risk_level'],
-                image_url=f"uploaded_{datetime.utcnow().timestamp()}.jpg"
+                image_url=filename  # Store just the filename, not full path
             )
             record.save()
             
@@ -346,12 +364,24 @@ def create_app():
         Expects: multipart/form-data with optional 'image' file and JSON fields
         """
         try:
-            # Get image if provided
+            # Get image if provided and save it
             image_bytes = None
+            saved_filename = None
             if 'image' in request.files:
                 image_file = request.files['image']
                 if image_file.filename != '':
-                    image_bytes = image_file.read()
+                    # Save the uploaded image to disk
+                    original_filename = secure_filename(image_file.filename)
+                    timestamp = datetime.utcnow().timestamp()
+                    saved_filename = f"{current_user.id}_{timestamp}_{original_filename}"
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
+                    
+                    # Save file to uploads folder
+                    image_file.save(filepath)
+                    
+                    # Read image bytes for prediction
+                    with open(filepath, 'rb') as f:
+                        image_bytes = f.read()
             
             # Get tabular data from form or JSON
             if request.form:
@@ -382,7 +412,7 @@ def create_app():
                 thalach=features['thalach'] if features else None,
                 exang=features['exang'] if features else None,
                 oldpeak=features['oldpeak'] if features else None,
-                image_url=f"uploaded_{datetime.utcnow().timestamp()}.jpg" if image_bytes else None
+                image_url=saved_filename  # Store actual filename
             )
             record.save()
             
