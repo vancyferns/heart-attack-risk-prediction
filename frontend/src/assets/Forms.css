@@ -119,3 +119,43 @@
     background-color: #cccccc;
     cursor: not-allowed;
 }
+
+/* --- Password Requirements Styles --- */
+
+.password-requirements {
+    background: #f9f9f9;
+    border-left: 4px solid #E075A0;
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+.password-requirements .requirements-title {
+    margin: 0 0 10px 0;
+    color: #333333;
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+.password-requirements ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirements li {
+    padding: 6px 0;
+    color: #666666;
+    transition: color 0.2s ease;
+}
+
+.password-requirements li.valid {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.password-requirements li.invalid {
+    color: #dc3545;
+    font-weight: 500;
+}

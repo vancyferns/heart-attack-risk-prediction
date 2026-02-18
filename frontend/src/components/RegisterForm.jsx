@@ -14,11 +14,33 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   const [message, setMessage] = useState(''); // State for success message
   const [isLoading, setIsLoading] = useState(false);
 
+  // Password validation rules
+  const passwordRules = {
+    minLength: password.length >= 8,
+    hasUpperCase: /[A-Z]/.test(password),
+    hasLowerCase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  };
+
+  const isPasswordValid =
+    passwordRules.minLength &&
+    passwordRules.hasUpperCase &&
+    passwordRules.hasLowerCase &&
+    passwordRules.hasNumber &&
+    passwordRules.hasSpecialChar;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
     setIsLoading(true);
+
+    if (!isPasswordValid) {
+      setError("Password does not meet all requirements. Please check the rules below.");
+      setIsLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match!");
@@ -109,6 +131,30 @@ const RegisterForm = ({ onSwitchToLogin }) => {
               required 
               disabled={isLoading}
             />
+            
+            {/* Password Requirements */}
+            {password && (
+              <div className="password-requirements">
+                <p className="requirements-title">Password Requirements:</p>
+                <ul>
+                  <li className={passwordRules.minLength ? 'valid' : 'invalid'}>
+                    {passwordRules.minLength ? '✓' : '✗'} At least 8 characters
+                  </li>
+                  <li className={passwordRules.hasUpperCase ? 'valid' : 'invalid'}>
+                    {passwordRules.hasUpperCase ? '✓' : '✗'} At least 1 uppercase letter (A-Z)
+                  </li>
+                  <li className={passwordRules.hasLowerCase ? 'valid' : 'invalid'}>
+                    {passwordRules.hasLowerCase ? '✓' : '✗'} At least 1 lowercase letter (a-z)
+                  </li>
+                  <li className={passwordRules.hasNumber ? 'valid' : 'invalid'}>
+                    {passwordRules.hasNumber ? '✓' : '✗'} At least 1 number (0-9)
+                  </li>
+                  <li className={passwordRules.hasSpecialChar ? 'valid' : 'invalid'}>
+                    {passwordRules.hasSpecialChar ? '✓' : '✗'} At least 1 special character (!@#$%^&* etc.)
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
           
           <div className="form-group">

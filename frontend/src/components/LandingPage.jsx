@@ -178,7 +178,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
           <div className="footer-section">
             <h4>Quick Links</h4>
             <ul>
-              <li><a onClick={() => handleFooterLink('features')}>Features</a></li>
+             
               <li><a onClick={() => handleFooterLink('flow')}>How It Works</a></li>
               <li><a onClick={() => handleFooterLink('benefits')}>Benefits</a></li>
             </ul>
@@ -201,7 +201,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2024 Heart Lens. All rights reserved. Medical technology for better health outcomes.</p>
+          <p>&copy; 2026 Heart Lens. All rights reserved. Medical technology for better health outcomes.</p>
         </div>
       </footer>
     </div>
