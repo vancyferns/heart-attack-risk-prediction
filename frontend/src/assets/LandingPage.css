@@ -49,7 +49,7 @@
 .signin-btn {
   background: transparent;
   color: #b33a3a;
-  border: 2px solid #b33a3a;
+  border: 2px solid #db3737;
 }
 
 .signin-btn:hover {
@@ -87,13 +87,13 @@
 
 .hero-subtitle {
   font-size: 1.2em;
-  color: #718096;
+  color: #8792a3;
   line-height: 1.6;
   margin-bottom: 30px;
 }
 
 .hero-buttons {
-  display: flex;
+  display: flex; 
   gap: 20px;
   flex-wrap: wrap;
 }
@@ -173,7 +173,7 @@
   50% { transform: translateY(-20px); }
 }
 
-/* Features (removed) */
+
 
 /* Flow Section */
 .flow-section {
@@ -237,7 +237,7 @@
   margin: 0 5px;
 }
 
-.key-features { /* removed */ }
+
 
 .key-feature:hover {
   transform: scale(1.05);
@@ -386,18 +386,29 @@
 }
 
 /* Footer */
+/* Footer */
 .landing-footer {
   background: #2d3748;
   color: white;
   padding: 60px 40px 20px;
+  text-align: center;
 }
 
+/* This centers both Heart Lens & Quick Links */
 .footer-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 40px;
-  max-width: 1200px;
+  display: flex;
+  justify-content: center;   /* centers horizontally */
+  align-items: flex-start;
+  gap: 120px;                /* space between the two sections */
+  max-width: 900px;
   margin: 0 auto 40px;
+}
+
+/* Center text inside each section */
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .footer-section h4 {
@@ -429,7 +440,7 @@
 }
 
 .footer-section a:hover {
-  color: #b33a3a;
+  color: #ff7b7b;
 }
 
 .footer-bottom {
@@ -498,6 +509,13 @@
     grid-template-columns: 1fr;
     gap: 30px;
   }
+  .footer-content {
+  display: flex;
+  justify-content: center;   /* centers horizontally */
+  align-items: flex-start;
+  gap: 120px;                /* space between Heart Lens & Quick Links */
+  text-align: center;        /* center text inside */
+}
 }
 
 @media (max-width: 480px) {

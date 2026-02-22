@@ -5,7 +5,7 @@ import '../assets/EyeScanUpload.css';
 // Vite exposes env vars via `import.meta.env`. Use `VITE_` prefix for custom vars.
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
 
-const EyeScanUpload = ({ onSubmit, patientData }) => {
+const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -214,15 +214,24 @@ const EyeScanUpload = ({ onSubmit, patientData }) => {
           <div className="upload-info">
             <h4>Image Requirements:</h4>
             <ul>
-              <li>Format: JPG, PNG, or GIF</li>
+              <li>Format: JPG, PNG</li>
               <li>Maximum file size: 10MB</li>
-              <li>Clear, well-lit eye scan image recommended</li>
-              <li>Minimum resolution: 512x512 pixels</li>
+              
+  
             </ul>
           </div>
         </div>
 
         <div className="scan-actions">
+          <button
+            type="button"
+            className="btn btn-secondary back-btn"
+            onClick={() => (onBack ? onBack() : window.history.back())}
+            disabled={isAnalyzing}
+          >
+            ← Back
+          </button>
+
           <button 
             type="submit" 
             className="btn btn-primary"

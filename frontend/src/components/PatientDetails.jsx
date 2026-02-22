@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../assets/PatientDetails.css';
 
-const PatientDetails = ({ onSubmit }) => {
+const PatientDetails = ({ onSubmit, onBack }) => {
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -178,6 +178,15 @@ const PatientDetails = ({ onSubmit }) => {
         </div>
 
         <div className="form-actions">
+          <button
+            type="button"
+            className="btn btn-secondary back-btn"
+            onClick={() => (onBack ? onBack() : window.history.back())}
+            disabled={isSubmitting}
+          >
+            ← Back
+          </button>
+
           <button 
             type="submit" 
             className="btn btn-primary"
@@ -192,3 +201,5 @@ const PatientDetails = ({ onSubmit }) => {
 };
 
 export default PatientDetails;
+
+

@@ -153,6 +153,21 @@
   transform: none;
 }
 
+/* Back button adjustments */
+.back-btn {
+  margin-right: 28px; /* shift it left relative to the primary button */
+  padding: 12px 32px;
+  min-width: auto;
+  background: #edf2f7;
+  color: #2d3748;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+.back-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+
+
 /* Responsive */
 @media (max-width: 768px) {
   .patient-details-container {

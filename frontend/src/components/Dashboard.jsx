@@ -4,6 +4,7 @@ import Navigation from './Navigation';
 import PatientDetails from './PatientDetails';
 import EyeScanUpload from './EyeScanUpload';
 import Results from './Results';
+import Settings from './Settings';
 import '../assets/Dashboard.css';
 
 const Dashboard = ({ user, onLogout }) => {
@@ -35,9 +36,9 @@ const Dashboard = ({ user, onLogout }) => {
   const renderContent = () => {
     switch (currentView) {
       case 'patient-details':
-        return <PatientDetails onSubmit={handlePatientDataSubmit} />;
+        return <PatientDetails onSubmit={handlePatientDataSubmit} onBack={() => setCurrentView('dashboard')} />;
       case 'eye-scan':
-        return <EyeScanUpload onSubmit={handleScanUpload} patientData={patientData} />;
+        return <EyeScanUpload onSubmit={handleScanUpload} patientData={patientData} onBack={() => setCurrentView('patient-details')} />;
       case 'results':
         return (
           <Results 
@@ -50,6 +51,8 @@ const Dashboard = ({ user, onLogout }) => {
         return <HistoryView onBack={() => setCurrentView('dashboard')} />;
       case 'analytics':
         return <AnalyticsView onBack={() => setCurrentView('dashboard')} />;
+      case 'settings':
+        return <Settings user={user} onBack={() => setCurrentView('dashboard')} onLogout={onLogout} />;
       default:
         return <HomeView onNavigate={handleNavigate} user={user} />;
     }
