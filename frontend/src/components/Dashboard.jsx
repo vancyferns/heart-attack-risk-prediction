@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Navigation from './Navigation';
+import ProfileView from './ProfileView';
 import PatientDetails from './PatientDetails';
 import EyeScanUpload from './EyeScanUpload';
 import Results from './Results';
@@ -53,6 +54,8 @@ const Dashboard = ({ user, onLogout }) => {
         return <AnalyticsView onBack={() => setCurrentView('dashboard')} />;
       case 'settings':
         return <Settings user={user} onBack={() => setCurrentView('dashboard')} onLogout={onLogout} />;
+      case 'profile':
+        return <ProfileView user={user} onBack={() => setCurrentView('dashboard')} />;
       default:
         return <HomeView onNavigate={handleNavigate} user={user} />;
     }

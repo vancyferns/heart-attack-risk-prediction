@@ -159,3 +159,67 @@
     color: #dc3545;
     font-weight: 500;
 }
+
+/* Password field toggle styles */
+.password-field-wrapper {
+    position: relative;
+    display: block;
+    min-height: 44px;
+}
+
+.password-field-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 56px; /* room for the fixed toggle */
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #666666;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    z-index: 3;
+}
+
+.toggle-password svg {
+    width: 20px;
+    height: 20px;
+}
+
+.toggle-password:focus {
+    outline: none;
+}
+
+.toggle-password:hover {
+    color: #E075A0;
+}
+
+/* Static visibility icon (non-interactive) */
+.visibility-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #666666;
+    width: 32px;
+    height: 32px;
+    pointer-events: none; /* make non-interactive */
+}
+
+.visibility-icon svg {
+    width: 20px;
+    height: 20px;
+}

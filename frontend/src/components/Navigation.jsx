@@ -3,6 +3,7 @@ import '../assets/Navigation.css';
 
 const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -28,9 +29,14 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
         </div>
 
         <div className="user-profile">
-          <div className="user-avatar">
+          <button
+            className="user-avatar"
+            onClick={() => setShowProfile(true)}
+            title="View profile"
+            aria-label={`View profile for ${user.name}`}
+          >
             {user.name.charAt(0).toUpperCase()}
-          </div>
+          </button>
           {isOpen && (
             <div className="user-info">
               <p className="user-name">{user.name}</p>
@@ -109,6 +115,25 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
       </nav>
 
       {isOpen && <div className="overlay" onClick={toggleSidebar}></div>}
+      {showProfile && (
+        <div className="profile-overlay" onClick={() => setShowProfile(false)}>
+          <div className="profile-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-center">
+              <div className="profile-avatar-large">{user.name.charAt(0).toUpperCase()}</div>
+
+              <div className="profile-field-inline">
+                <span className="profile-label-inline">Name :</span>
+                <span className="profile-value-inline">{user.name}</span>
+              </div>
+
+              <div className="profile-field-inline">
+                <span className="profile-label-inline">Email :</span>
+                <span className="profile-value-inline">{user.email}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

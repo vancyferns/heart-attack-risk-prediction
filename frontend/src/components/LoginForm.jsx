@@ -8,6 +8,7 @@ const API_BASE_URL = 'http://localhost:5000/api/auth';
 const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(''); // State for error messages
   const [isLoading, setIsLoading] = useState(false);
 
@@ -72,15 +73,23 @@ const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
           
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input 
-              type="password" 
-              id="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Enter your password"
-              required 
-              disabled={isLoading}
-            />
+            <div className="password-field-wrapper">
+              <input 
+                type="password" 
+                id="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="Enter your password"
+                required 
+                disabled={isLoading}
+              />
+              <span className="visibility-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
+            </div>
           </div>
           
           <button type="submit" className="submit-btn" disabled={isLoading}>

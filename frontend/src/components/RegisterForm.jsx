@@ -10,6 +10,8 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState(''); // State for success message
   const [isLoading, setIsLoading] = useState(false);
@@ -122,15 +124,23 @@ const RegisterForm = ({ onSwitchToLogin }) => {
           
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input 
-              type="password" 
-              id="password-reg" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Create a password"
-              required 
-              disabled={isLoading}
-            />
+            <div className="password-field-wrapper">
+              <input 
+                type="password" 
+                id="password-reg" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="Create a password"
+                required 
+                disabled={isLoading}
+              />
+              <span className="visibility-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
+            </div>
             
             {/* Password Requirements */}
             {password && (
@@ -159,15 +169,23 @@ const RegisterForm = ({ onSwitchToLogin }) => {
           
           <div className="form-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
-            <input 
-              type="password" 
-              id="confirmPassword" 
-              value={confirmPassword} 
-              onChange={(e) => setConfirmPassword(e.target.value)} 
-              placeholder="Confirm your password"
-              required 
-              disabled={isLoading}
-            />
+            <div className="password-field-wrapper">
+              <input 
+                type="password" 
+                id="confirmPassword" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="Confirm your password"
+                required 
+                disabled={isLoading}
+              />
+              <span className="visibility-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
+            </div>
           </div>
           
           <button type="submit" className="submit-btn" disabled={isLoading}>
