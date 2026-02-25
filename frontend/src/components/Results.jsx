@@ -30,16 +30,58 @@ const Results = ({ results, patientData, onReset }) => {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setIsDownloading(true);
-    // Simulate PDF generation and download
-    setTimeout(() => {
+    
+    try {
       const pdfContent = generatePDFContent();
-      console.log('Downloading report:', pdfContent);
+      const fileName = `Heart_Attack_Risk_Report_${new Date().toISOString().split('T')[0]}.txt`;
+      
+      // Try to use File System Access API for "Save As" dialog
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+              description: 'Text Files',
+              accept: { 'text/plain': ['.txt'] },
+            }, {
+              description: 'PDF Files',
+              accept: { 'application/pdf': ['.pdf'] },
+            }],
+          });
+          
+          const writable = await handle.createWritable();
+          await writable.write(pdfContent);
+          await writable.close();
+          alert('Report saved successfully!');
+        } catch (err) {
+          // User cancelled the dialog
+          if (err.name !== 'AbortError') {
+            console.error('Error saving file:', err);
+            throw err;
+          }
+        }
+      } else {
+        // Fallback for browsers without File System Access API
+        // Create a blob and trigger download
+        const blob = new Blob([pdfContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Report downloaded successfully!');
+      }
+    } catch (err) {
+      console.error('Error downloading report:', err);
+      alert('Failed to download report. Please try again.');
+    } finally {
       setIsDownloading(false);
-      // In a real app, you would trigger actual PDF download here
-      alert('Report downloaded successfully!');
-    }, 1500);
+    }
   };
 
   const generatePDFContent = () => {
@@ -147,59 +189,7 @@ const Results = ({ results, patientData, onReset }) => {
         </div>
       </div>
 
-      {/* Analysis Message */}
-      <div className="analysis-message">
-        <h2>Analysis Overview</h2>
-        <p className="message-text">{results?.message}</p>
-      </div>
-
-      {/* Recommendations */}
-      <div className="recommendations-section">
-        <h2>Recommendations</h2>
-        <div className="recommendations-list">
-          {results?.recommendations?.map((rec, index) => (
-            <div key={index} className="recommendation-item">
-              <div className="rec-icon">→</div>
-              <p>{rec}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Risk Indicators */}
-      <div className="risk-indicators">
-        <h2>Risk Indicators</h2>
-        <div className="indicators-grid">
-          <div className="indicator">
-            <span className="indicator-label">Eye Fundus Changes</span>
-            <div className="indicator-bar">
-              <div className="indicator-fill" style={{ width: '75%' }}></div>
-            </div>
-            <span className="indicator-value">75% Risk</span>
-          </div>
-          <div className="indicator">
-            <span className="indicator-label">Vessel Abnormalities</span>
-            <div className="indicator-bar">
-              <div className="indicator-fill" style={{ width: '62%' }}></div>
-            </div>
-            <span className="indicator-value">62% Risk</span>
-          </div>
-          <div className="indicator">
-            <span className="indicator-label">Microaneurysms</span>
-            <div className="indicator-bar">
-              <div className="indicator-fill" style={{ width: '45%' }}></div>
-            </div>
-            <span className="indicator-value">45% Risk</span>
-          </div>
-          <div className="indicator">
-            <span className="indicator-label">Retinal Changes</span>
-            <div className="indicator-bar">
-              <div className="indicator-fill" style={{ width: '58%' }}></div>
-            </div>
-            <span className="indicator-value">58% Risk</span>
-          </div>
-        </div>
-      </div>
+      {/* Analysis Message, Recommendations and Risk Indicators removed per request */}
 
       {/* Actions */}
       <div className="results-actions">
