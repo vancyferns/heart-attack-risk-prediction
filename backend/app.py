@@ -206,6 +206,91 @@ def create_app():
             print(f"❌ Login failed - Unexpected error: {str(e)}")
             return jsonify({'msg': f'Login failed: {str(e)}'}), 500
 
+    @app.route('/api/auth/forgot-password', methods=['POST'])
+    def forgot_password():
+        """
+        Request password reset link by email.
+        Returns a generic success message for security.
+        """
+        try:
+            data = request.get_json() or {}
+            email = (data.get('email') or '').strip().lower()
+
+            if not email:
+                return jsonify({'msg': 'Email is required'}), 400
+
+            user = User.objects(email=email).first()
+            if not user:
+                return jsonify({'msg': 'If that email exists, a reset link has been sent.'}), 200
+
+            reset_token = jwt.encode(
+                {
+                    'user_id': str(user.id),
+                    'purpose': 'password_reset',
+                    'exp': datetime.utcnow() + timedelta(minutes=30)
+                },
+                app.config['SECRET_KEY'],
+                algorithm=app.config['JWT_ALGORITHM']
+            )
+
+            frontend_base_url = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
+            reset_link = f"{frontend_base_url}/?resetToken={reset_token}"
+
+            # Development behavior: log reset link on server console.
+            print(f"🔗 Password reset link for {email}: {reset_link}")
+
+            return jsonify({
+                'msg': 'If that email exists, a reset link has been sent.',
+                'reset_link': reset_link
+            }), 200
+        except Exception as e:
+            print(f"❌ Forgot password failed: {str(e)}")
+            return jsonify({'msg': 'Unable to process reset request right now'}), 500
+
+    @app.route('/api/auth/reset-password', methods=['POST'])
+    def reset_password():
+        """
+        Reset password using a valid reset token.
+        """
+        try:
+            data = request.get_json() or {}
+            token = data.get('token')
+            new_password = data.get('new_password')
+
+            if not token or not new_password:
+                return jsonify({'msg': 'Token and new password are required'}), 400
+
+            if len(new_password) < 6:
+                return jsonify({'msg': 'Password must be at least 6 characters long'}), 400
+
+            try:
+                payload = jwt.decode(
+                    token,
+                    app.config['SECRET_KEY'],
+                    algorithms=[app.config['JWT_ALGORITHM']]
+                )
+            except jwt.ExpiredSignatureError:
+                return jsonify({'msg': 'Reset token has expired'}), 400
+            except jwt.InvalidTokenError:
+                return jsonify({'msg': 'Invalid reset token'}), 400
+
+            if payload.get('purpose') != 'password_reset':
+                return jsonify({'msg': 'Invalid reset token'}), 400
+
+            user_id = payload.get('user_id')
+            user = User.objects(id=user_id).first()
+            if not user:
+                return jsonify({'msg': 'User not found'}), 404
+
+            user.set_password(new_password)
+            user.save()
+
+            return jsonify({'msg': 'Password reset successful. Please log in.'}), 200
+
+        except Exception as e:
+            print(f"❌ Reset password failed: {str(e)}")
+            return jsonify({'msg': 'Unable to reset password right now'}), 500
+
     # ---------------------------------
     # --- RECORDS ROUTES (SECURED) ---
     # ---------------------------------

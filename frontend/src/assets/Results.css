@@ -5,7 +5,7 @@
 }
 
 .results-header {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
   padding: 35px;
   border-radius: 12px;
@@ -158,10 +158,22 @@
 }
 
 .summary-item {
+  position: relative;
   padding: 15px;
   background: #f7fafc;
   border-radius: 8px;
-  border-left: 4px solid #b33a3a;
+  padding-left: 20px;
+  overflow: hidden;
+}
+
+.summary-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
 }
 
 .summary-label {
@@ -294,7 +306,7 @@
 
 .indicator-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(90deg, #3e3ab3 0%, #b33a3a 100%);
   transition: width 0.3s ease;
 }
 
@@ -327,7 +339,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
   box-shadow: 0 5px 15px rgba(179,58,58,0.18);
 }
@@ -338,14 +350,32 @@
 }
 
 .btn-secondary {
-  background: #e2e8f0;
-  color: #2d3748;
-  border: 2px solid #cbd5e0;
+  position: relative;
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) border-box;
+  color: #3e3ab3;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  z-index: 0;
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  background: white;
+  border-radius: 6.5px;
+  z-index: -1;
+  transition: opacity 0.3s ease;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #cbd5e0;
+  color: white;
   transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(62, 58, 179, 0.3), 0 4px 8px rgba(179, 58, 58, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled)::before {
+  opacity: 0;
 }
 
 .btn:disabled {
@@ -394,4 +424,76 @@
   .results-actions {
     grid-template-columns: 1fr;
   }
+}
+
+/* Dark Mode Styles for Results Page */
+[data-theme="dark"] .results-container {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .result-card,
+[data-theme="dark"] .patient-summary,
+[data-theme="dark"] .recommendations-section,
+[data-theme="dark"] .risk-indicators {
+  background: #2b2b2b;
+  border: 1px solid #3a3a3a;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+}
+
+/* Risk card gets inline light bg from JSX; force dark in dark mode */
+[data-theme="dark"] .risk-card {
+  background: #2b2b2b !important;
+  border-color: #4a4a4a;
+}
+
+[data-theme="dark"] .score-card,
+[data-theme="dark"] .confidence-card {
+  border-color: #4a4a4a;
+}
+
+[data-theme="dark"] .result-card h3,
+[data-theme="dark"] .score-text,
+[data-theme="dark"] .patient-summary h2,
+[data-theme="dark"] .recommendations-section h2,
+[data-theme="dark"] .risk-indicators h2,
+[data-theme="dark"] .summary-label,
+[data-theme="dark"] .summary-value,
+[data-theme="dark"] .indicator-label,
+[data-theme="dark"] .indicator-value,
+[data-theme="dark"] .analysis-message h2,
+[data-theme="dark"] .message-text,
+[data-theme="dark"] .recommendation-item p {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .confidence-label {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .summary-item {
+  background: #1f1f1f;
+}
+
+[data-theme="dark"] .recommendation-item {
+  background: #1f1f1f;
+  border-left-color: #b33a3a;
+}
+
+[data-theme="dark"] .recommendation-item:hover {
+  background: #262626;
+}
+
+[data-theme="dark"] .analysis-message {
+  background: linear-gradient(135deg, rgba(179, 58, 58, 0.18), rgba(62, 58, 179, 0.12));
+  border-left-color: #b33a3a;
+}
+
+[data-theme="dark"] .indicator-bar,
+[data-theme="dark"] .score-bg {
+  stroke: #4a4a4a;
+  background: #4a4a4a;
+}
+
+[data-theme="dark"] .btn-secondary::before {
+  background: white;
 }

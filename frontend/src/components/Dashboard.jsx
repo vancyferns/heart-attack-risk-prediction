@@ -8,7 +8,7 @@ import Results from './Results';
 import Settings from './Settings';
 import '../assets/Dashboard.css';
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, onUserUpdate, onLogout }) => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [patientData, setPatientData] = useState(null);
   const [scanResults, setScanResults] = useState(null);
@@ -53,7 +53,7 @@ const Dashboard = ({ user, onLogout }) => {
       case 'analytics':
         return <AnalyticsView onBack={() => setCurrentView('dashboard')} />;
       case 'settings':
-        return <Settings user={user} onBack={() => setCurrentView('dashboard')} onLogout={onLogout} />;
+        return <Settings user={user} onUserUpdate={onUserUpdate} onBack={() => setCurrentView('dashboard')} onLogout={onLogout} />;
       case 'profile':
         return <ProfileView user={user} onBack={() => setCurrentView('dashboard')} />;
       default:
@@ -127,7 +127,7 @@ const HomeView = ({ onNavigate, user }) => (
         <span className="icon-label">History</span>
         <h3>View History</h3>
         <p>Review past scans and risk assessments</p>
-        <button className="action-btn btn-secondary" onClick={() => onNavigate('history')}>
+        <button className="action-btn btn-outline-gradient" onClick={() => onNavigate('history')}>
           View History →
         </button>
       </motion.div>
@@ -142,7 +142,7 @@ const HomeView = ({ onNavigate, user }) => (
         <span className="icon-label">Analytics</span>
         <h3>Analytics</h3>
         <p>View comprehensive statistics and trends</p>
-        <button className="action-btn btn-secondary" onClick={() => onNavigate('analytics')}>
+        <button className="action-btn btn-outline-gradient" onClick={() => onNavigate('analytics')}>
           View Analytics →
         </button>
       </motion.div>

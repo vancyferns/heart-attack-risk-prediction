@@ -72,24 +72,42 @@ html, body, #root, .App {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(179,58,58,0.18);
+  box-shadow: 0 10px 20px rgba(62,58,179,0.18);
 }
 
 .btn-secondary {
+  position: relative;
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) border-box;
+  color: #3e3ab3;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  z-index: 0;
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
   background: white;
-  color: #b33a3a;
-  border: 2px solid #b33a3a;
+  border-radius: 6.5px;
+  z-index: -1;
+  transition: opacity 0.3s ease;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #b33a3a;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(62, 58, 179, 0.3), 0 4px 8px rgba(179, 58, 58, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled)::before {
+  opacity: 0;
 }
 
 /* Scrollbar Styles */
@@ -109,6 +127,15 @@ html, body, #root, .App {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
+}
+
+/* Dark Mode Styles */
+[data-theme="dark"] body {
+  background: #2b2b2b;
+}
+
+[data-theme="dark"] .dashboard-content {
+  background: #2b2b2b;
 }
 
 /* Responsive */

@@ -11,15 +11,37 @@ function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasResetToken = Boolean(params.get('resetToken'));
+
+    if (hasResetToken) {
+      setCurrentView('login');
+    }
+
     // Check if user is already logged in
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
-    if (token && savedUser) {
+    const savedUserProfile = localStorage.getItem('userProfile');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+
+    // Keep global theme in sync on initial app load
+    document.body.setAttribute('data-theme', savedTheme);
+
+    if (token && savedUser && !hasResetToken) {
+      const parsedUser = JSON.parse(savedUser);
+      const parsedUserProfile = savedUserProfile ? JSON.parse(savedUserProfile) : {};
+      const mergedUser = { ...parsedUser, ...parsedUserProfile };
+
       setIsAuthenticated(true);
-      setUser(JSON.parse(savedUser));
+      setUser(mergedUser);
       setCurrentView('dashboard');
     }
   }, []);
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
 
   const handleLoginSuccess = (token, userData) => {
     setIsAuthenticated(true);
@@ -40,6 +62,7 @@ function App() {
     return (
       <Dashboard 
         user={user}
+        onUserUpdate={handleUserUpdate}
         onLogout={handleLogout}
       />
     );

@@ -47,19 +47,20 @@
 }
 
 .signin-btn {
-  background: transparent;
-  color: #b33a3a;
-  border: 2px solid #db3737;
+ background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
+  color:  rgb(238, 233, 233);
+  
 }
 
 .signin-btn:hover {
-  background: #b33a3a;
-  color: white;
+  transform: scale(1.05);
+ 
+  color: rgb(235, 233, 238);
 }
 
 .signup-btn {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
-  color: white;
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
+  color: rgb(238, 233, 233);
 }
 
 .signup-btn:hover {
@@ -74,7 +75,7 @@
   gap: 50px;
   align-items: center;
   padding: 80px 40px;
-  background: linear-gradient(135deg, #ff7b7b15 0%, #b33a3a15 100%);
+  background: linear-gradient(135deg, #3e3ab315 0%, #b33a3a15 100%);
   min-height: 600px;
 }
 
@@ -109,24 +110,41 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
-  color: white;
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
+  color: rgb(238, 233, 233);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(179,58,58,0.36);
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(179,58,58,0.18);
 }
 
 .btn-secondary {
+  position: relative;
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) border-box;
+  color: #3e3ab3;
+  border: 1.5px solid transparent;
+  z-index: 0;
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
   background: white;
-  color: #b33a3a;
-  border: 2px solid #b33a3a;
+  border-radius: 6.5px;
+  z-index: -1;
+  transition: opacity 0.3s ease;
 }
 
 .btn-secondary:hover {
-  background: #b33a3a;
   color: white;
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(62, 58, 179, 0.3), 0 4px 8px rgba(179, 58, 58, 0.2);
+}
+
+.btn-secondary:hover::before {
+  opacity: 0;
 }
 
 /* Hero Visual */
@@ -210,8 +228,8 @@
 }
 
 .flow-step:hover {
-  border-color: #b33a3a;
-  box-shadow: 0 8px 16px rgba(179,58,58,0.12);
+  border-color: #3e3ab3;
+  box-shadow: 0 8px 16px rgba(62,58,179,0.12);
 }
 
 .flow-icon {
@@ -233,7 +251,7 @@
 
 .flow-arrow {
   font-size: 2em;
-  color: #b33a3a;
+  color: #3e3ab3;
   margin: 0 5px;
 }
 
@@ -264,7 +282,7 @@
 /* Benefits Section */
 .benefits-section {
   padding: 40px 40px;
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
 }
 
@@ -326,16 +344,16 @@
 .stat-card {
   text-align: center;
   padding: 40px 30px;
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(179,58,58,0.28);
+  box-shadow: 0 10px 30px rgba(62,58,179,0.28);
   transition: all 0.3s ease;
 }
 
 .stat-card:hover {
   transform: scale(1.05);
-  box-shadow: 0 15px 40px rgba(179,58,58,0.36);
+  box-shadow: 0 15px 40px rgba(62,58,179,0.36);
 }
 
 .stat-number {
@@ -352,7 +370,7 @@
 /* CTA Section */
 .cta-section {
   padding: 60px 40px;
-  background: linear-gradient(135deg, #ff7b7b15 0%, #b33a3a15 100%);
+  background: linear-gradient(135deg, #3e3ab315 0%, #b33a3a15 100%);
   text-align: center;
 }
 
@@ -440,7 +458,7 @@
 }
 
 .footer-section a:hover {
-  color: #ff7b7b;
+  color: #3e3ab3;
 }
 
 .footer-bottom {

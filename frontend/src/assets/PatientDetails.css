@@ -5,7 +5,7 @@
 }
 
 .details-header {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
   padding: 35px;
   border-radius: 12px;
@@ -91,7 +91,8 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #b33a3a;
+  border-color: transparent;
+  border-image: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) 1;
   box-shadow: 0 0 0 3px rgba(179,58,58,0.08);
 }
 
@@ -137,7 +138,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff7b7b 0%, #b33a3a 100%);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
   color: white;
   box-shadow: 0 5px 15px rgba(179,58,58,0.18);
 }
@@ -155,15 +156,35 @@
 
 /* Back button adjustments */
 .back-btn {
-  margin-right: 28px; /* shift it left relative to the primary button */
+  position: relative;
+  margin-right: 28px;
   padding: 12px 32px;
   min-width: auto;
-  background: #edf2f7;
-  color: #2d3748;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) border-box;
+  color: #3e3ab3;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  z-index: 0;
 }
+
+.back-btn::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  background: white;
+  border-radius: 6.5px;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
 .back-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(62, 58, 179, 0.3), 0 4px 8px rgba(179, 58, 58, 0.2);
+}
+
+.back-btn:hover:not(:disabled)::before {
+  opacity: 0;
 }
 
 
@@ -194,4 +215,83 @@
     min-width: auto;
     width: 100%;
   }
+}
+
+/* Dark Mode Styles for Patient Registration */
+[data-theme="dark"] .patient-details-container {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .details-header {
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .patient-form {
+  background: #2b2b2b;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .patient-form .form-section {
+  border-bottom-color: #3a3a3a;
+}
+
+[data-theme="dark"] .patient-form .form-section h2 {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .patient-form .form-group label {
+  color: #d0d0d0;
+}
+
+[data-theme="dark"] .patient-form .form-group input,
+[data-theme="dark"] .patient-form .form-group textarea {
+  background: #1e1e1e;
+  border-color: #3a3a3a;
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .patient-form .form-group input:focus,
+[data-theme="dark"] .patient-form .form-group textarea:focus {
+  border-color: transparent;
+  border-image: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) 1;
+  box-shadow: 0 0 0 3px rgba(179, 58, 58, 0.2);
+}
+
+[data-theme="dark"] .patient-form .form-group input::placeholder,
+[data-theme="dark"] .patient-form .form-group textarea::placeholder {
+  color: #666;
+}
+
+[data-theme="dark"] .patient-form .form-group input:disabled,
+[data-theme="dark"] .patient-form .form-group textarea:disabled {
+  background: #1a1a1a;
+  color: #555;
+}
+
+[data-theme="dark"] .patient-form .form-actions {
+  background: #252525;
+}
+
+[data-theme="dark"] .patient-form .back-btn {
+  background: linear-gradient(135deg, #3e3ab3 0%, #b33a3a 100%) border-box;
+  color: #ccc;
+  border: 1.5px solid transparent;
+}
+
+[data-theme="dark"] .patient-form .back-btn::before {
+  background: #2b2b2b;
+}
+
+[data-theme="dark"] .patient-form .back-btn:hover:not(:disabled) {
+  color: white;
+  box-shadow: 0 8px 16px rgba(62, 58, 179, 0.3), 0 4px 8px rgba(179, 58, 58, 0.2);
+}
+
+[data-theme="dark"] .patient-form .back-btn:hover:not(:disabled)::before {
+  opacity: 0;
+}
+
+[data-theme="dark"] .patient-form .error-text {
+  color: #ff6b6b;
 }

@@ -1,6 +1,6 @@
 :root {
   --color-primary: #b33a3a; /* deep red */
-  --color-accent: #ff7b7b; /* light reddish-pink */
+  --color-accent: #3e3ab3; /* light reddish-pink */
   --color-muted: #718096;
   --bg: #ffffff;
   font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -47,7 +47,7 @@ a {
 }
 
 a:hover {
-  color: #ff7b7b;
+  color: #3e3ab3;
   text-decoration: underline;
 }
 

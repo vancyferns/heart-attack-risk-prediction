@@ -20,12 +20,16 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
       <nav className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="logo-section">
-            <div className="logo-icon">👁️</div>
-            {isOpen && <h2 className="logo-text">Heart Lens</h2>}
+            {isOpen && (
+              <>
+                <span className="logo-icon">👁️</span>
+                <h2 className="logo-text">Heart Lens</h2>
+              </>
+            )}
+            <button className="toggle-btn" onClick={toggleSidebar}>
+              {isOpen ? '✕' : '☰'}
+            </button>
           </div>
-          <button className="toggle-btn" onClick={toggleSidebar}>
-            {isOpen ? '✕' : '☰'}
-          </button>
         </div>
 
         <div className="user-profile">
@@ -109,7 +113,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
 
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout} title="Logout">
-            {isOpen ? '🚪 Logout' : '🚪'}
+            {isOpen ? '↩ Logout' : '↩'}
           </button>
         </div>
       </nav>
@@ -129,6 +133,11 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               <div className="profile-field-inline">
                 <span className="profile-label-inline">Email :</span>
                 <span className="profile-value-inline">{user.email}</span>
+              </div>
+
+              <div className="profile-field-inline">
+                <span className="profile-label-inline">Phone :</span>
+                <span className="profile-value-inline">{user.phone || 'Not provided'}</span>
               </div>
             </div>
           </div>
