@@ -9,10 +9,10 @@ from PIL import Image
 import io
 
 # Define model paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
-UNET_PATH = os.path.join(MODELS_DIR, 'best.pth')
-EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet_best.pth')
+UNET_PATH = os.path.join(MODELS_DIR, 'unet_pseudo_best.pth')
+EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet_b3_best_fusion.pth')
 XGBOOST_PATH = os.path.join(MODELS_DIR, 'xgb_model.json')
 
 # Global model instances
@@ -100,13 +100,12 @@ class UNet(nn.Module):
 # ===========================
 # EfficientNet Model Setup
 # ===========================
-def create_efficientnet_model(num_classes=2):
-    """Create EfficientNet-B0 model for classification"""
-    model = models.efficientnet_b0(weights=None)
-    # Modify the classifier for binary/multi-class classification
+def create_efficientnet_model(num_classes=1):
+    """Create EfficientNet-B3 model for classification (binary output)"""
+    model = models.efficientnet_b3(weights=None)
     num_features = model.classifier[1].in_features
     model.classifier = nn.Sequential(
-        nn.Dropout(p=0.2, inplace=True),
+        nn.Dropout(p=0.3, inplace=True),
         nn.Linear(num_features, num_classes)
     )
     return model
@@ -126,13 +125,16 @@ def load_models():
         if os.path.exists(UNET_PATH):
             unet_model = UNet(in_channels=3, out_channels=1)
             checkpoint = torch.load(UNET_PATH, map_location=device)
-            
             # Handle different checkpoint formats
-            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-                unet_model.load_state_dict(checkpoint['model_state_dict'])
+            if isinstance(checkpoint, dict):
+                if 'model_state' in checkpoint:
+                    unet_model.load_state_dict(checkpoint['model_state'])
+                elif 'model_state_dict' in checkpoint:
+                    unet_model.load_state_dict(checkpoint['model_state_dict'])
+                else:
+                    unet_model.load_state_dict(checkpoint)
             else:
                 unet_model.load_state_dict(checkpoint)
-            
             unet_model.to(device)
             unet_model.eval()
             print(f"✅ UNet model loaded from {UNET_PATH}")
@@ -144,15 +146,13 @@ def load_models():
     # Load EfficientNet
     try:
         if os.path.exists(EFFICIENTNET_PATH):
-            efficientnet_model = create_efficientnet_model(num_classes=2)
+            efficientnet_model = create_efficientnet_model(num_classes=1)
             checkpoint = torch.load(EFFICIENTNET_PATH, map_location=device)
-            
             # Handle different checkpoint formats
             if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
                 efficientnet_model.load_state_dict(checkpoint['model_state_dict'])
             else:
                 efficientnet_model.load_state_dict(checkpoint)
-            
             efficientnet_model.to(device)
             efficientnet_model.eval()
             print(f"✅ EfficientNet model loaded from {EFFICIENTNET_PATH}")
@@ -215,28 +215,25 @@ def predict_from_image(image_bytes):
         # Preprocess image
         image_tensor = preprocess_image(image_bytes)
         
-        # Make prediction
+        # Make prediction for 1-class (sigmoid) output
         with torch.no_grad():
             outputs = efficientnet_model(image_tensor)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted = torch.max(probabilities, 1)
-            
-            # Extract probabilities for high risk (assuming class 1 is high risk)
-            high_risk_prob = probabilities[0][1].item() * 100
-            
+            # outputs shape: [batch, 1], apply sigmoid
+            prob = torch.sigmoid(outputs)[0][0].item() * 100
+            # Confidence is the distance from 50 (uncertainty)
+            confidence = abs(prob - 50) * 2
             # Determine risk level
-            if high_risk_prob >= 70:
+            if prob >= 70:
                 risk_level = "High"
-            elif high_risk_prob >= 40:
+            elif prob >= 40:
                 risk_level = "Medium"
             else:
                 risk_level = "Low"
-            
             return {
-                'risk_score': round(high_risk_prob, 2),
+                'risk_score': round(prob, 2),
                 'risk_level': risk_level,
-                'confidence': round(confidence.item() * 100, 2),
-                'prediction': int(predicted.item())
+                'confidence': round(confidence, 2),
+                'prediction': int(prob >= 50)
             }
     
     except Exception as e:
