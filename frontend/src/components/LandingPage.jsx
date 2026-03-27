@@ -67,7 +67,7 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
         <div className="hero-visual">
           <div className="hero-graphic">
             <div className="graphic-element element-1">👁️</div>
-            <div className="graphic-element element-2">❤️</div>
+            <div className="graphic-element element-2">🫀</div>
             <div className="graphic-element element-3">📊</div>
           </div>
         </div>

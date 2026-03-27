@@ -64,6 +64,7 @@ function App() {
         user={user}
         onUserUpdate={handleUserUpdate}
         onLogout={handleLogout}
+        onBackToLanding={() => setCurrentView('landing')}
       />
     );
   }

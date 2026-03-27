@@ -173,6 +173,30 @@
   font-weight: 600;
 }
 
+.settings-container.android-mobile .section-header {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.settings-container.android-mobile .section-header h2 {
+  font-size: 1.2em;
+  white-space: nowrap;
+}
+
+.settings-container.android-mobile .section-header .btn-sm {
+  padding: 6px 9px;
+  font-size: 0.74em;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: fit-content !important;
+  min-width: 72px !important;
+  max-width: 84px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .section-description {
   color: #718096;
   margin-bottom: 25px;
@@ -544,9 +568,23 @@
   }
 
   .settings-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .settings-header h1 {
+    font-size: 1.4em;
+    margin: 0;
+  }
+
+  .btn-back {
+    width: auto;
+    padding: 7px 11px;
+    font-size: 0.82em;
+    flex-shrink: 0;
   }
 
   .notification-item,

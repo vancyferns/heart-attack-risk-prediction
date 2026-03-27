@@ -8,7 +8,7 @@ import Results from './Results';
 import Settings from './Settings';
 import '../assets/Dashboard.css';
 
-const Dashboard = ({ user, onUserUpdate, onLogout }) => {
+const Dashboard = ({ user, onUserUpdate, onLogout, onBackToLanding }) => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [patientData, setPatientData] = useState(null);
   const [scanResults, setScanResults] = useState(null);
@@ -57,7 +57,7 @@ const Dashboard = ({ user, onUserUpdate, onLogout }) => {
       case 'profile':
         return <ProfileView user={user} onBack={() => setCurrentView('dashboard')} />;
       default:
-        return <HomeView onNavigate={handleNavigate} user={user} />;
+        return <HomeView onNavigate={handleNavigate} user={user} onBack={onBackToLanding} />;
     }
   };
 
@@ -76,7 +76,7 @@ const Dashboard = ({ user, onUserUpdate, onLogout }) => {
   );
 };
 
-const HomeView = ({ onNavigate, user }) => (
+const HomeView = ({ onNavigate, user, onBack }) => (
   <motion.div
     className="home-view"
     initial={{ opacity: 0, y: 20 }}
@@ -89,7 +89,10 @@ const HomeView = ({ onNavigate, user }) => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2 }}
     >
-      <h1>Welcome, {user.name}!</h1>
+      <div className="home-header-top">
+        <h1>Welcome, {user.name}!</h1>
+        <button className="dashboard-back-btn" onClick={onBack}>← Back</button>
+      </div>
       <p className="subtitle">Ophthalmology Eye Scan & Heart Attack Risk Prediction System</p>
     </motion.div>
 

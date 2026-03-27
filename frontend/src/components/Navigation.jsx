@@ -2,8 +2,20 @@ import React, { useState } from 'react';
 import '../assets/Navigation.css';
 
 const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 480);
+  const [isOpen, setIsOpen] = useState(() => window.innerWidth > 480);
   const [showProfile, setShowProfile] = useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 480;
+      setIsMobile(mobile);
+      setIsOpen(!mobile);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -15,8 +27,25 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
     }
   };
 
+  const handleNavClick = (view) => {
+    onNavigate(view);
+    if (isMobile) {
+      setIsOpen(false);
+    }
+  };
+
   return (
     <>
+      {isMobile && !isOpen && (
+        <button
+          className="mobile-menu-btn"
+          onClick={toggleSidebar}
+          aria-label="Open navigation menu"
+        >
+          ☰
+        </button>
+      )}
+
       <nav className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="logo-section">
@@ -57,7 +86,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               label="Dashboard"
               view="dashboard"
               currentView={currentView}
-              onNavigate={onNavigate}
+              onNavigate={handleNavClick}
               isOpen={isOpen}
             />
             <NavItem
@@ -65,7 +94,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               label="Patient Details"
               view="patient-details"
               currentView={currentView}
-              onNavigate={onNavigate}
+              onNavigate={handleNavClick}
               isOpen={isOpen}
             />
           </div>
@@ -77,7 +106,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               label="Eye Scan"
               view="eye-scan"
               currentView={currentView}
-              onNavigate={onNavigate}
+              onNavigate={handleNavClick}
               isOpen={isOpen}
             />
             <NavItem
@@ -85,7 +114,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               label="Results"
               view="results"
               currentView={currentView}
-              onNavigate={onNavigate}
+              onNavigate={handleNavClick}
               isOpen={isOpen}
             />
           </div>
@@ -97,7 +126,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               label="History"
               view="history"
               currentView={currentView}
-              onNavigate={onNavigate}
+              onNavigate={handleNavClick}
               isOpen={isOpen}
             />
             <NavItem
@@ -105,7 +134,7 @@ const Navigation = ({ currentView, onNavigate, user, onLogout }) => {
               label="Settings"
               view="settings"
               currentView={currentView}
-              onNavigate={onNavigate}
+              onNavigate={handleNavClick}
               isOpen={isOpen}
             />
           </div>
