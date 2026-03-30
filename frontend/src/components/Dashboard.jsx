@@ -8,6 +8,12 @@ import Results from './Results';
 import Settings from './Settings';
 import '../assets/Dashboard.css';
 
+const RECORDS_API_BASE = import.meta.env.VITE_API_BASE_URL || (
+  window.location.hostname.includes('devtunnels.ms')
+    ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api'
+    : 'http://127.0.0.1:5000/api'
+);
+
 const Dashboard = ({ user, onUserUpdate, onLogout, onBackToLanding }) => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [patientData, setPatientData] = useState(null);
@@ -230,7 +236,7 @@ const AnalyticsView = ({ onBack }) => {
       setLoading(true);
       const token = localStorage.getItem('token');
       try {
-        const res = await fetch('http://127.0.0.1:5000/api/records', {
+        const res = await fetch(`${RECORDS_API_BASE}/records`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' }
         });
         if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -312,7 +318,7 @@ const HistoryView = ({ onBack }) => {
       }
       
       try {
-        const res = await fetch('http://127.0.0.1:5000/api/records', {
+        const res = await fetch(`${RECORDS_API_BASE}/records`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

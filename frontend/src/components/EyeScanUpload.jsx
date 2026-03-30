@@ -3,7 +3,11 @@ import axios from 'axios';
 import '../assets/EyeScanUpload.css';
 
 // Vite exposes env vars via `import.meta.env`. Use `VITE_` prefix for custom vars.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (
+  window.location.hostname.includes('devtunnels.ms')
+    ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api'
+    : 'http://127.0.0.1:5000/api'
+);
 
 const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
   const [file, setFile] = useState(null);

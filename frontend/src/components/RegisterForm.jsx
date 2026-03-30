@@ -3,7 +3,11 @@ import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api/auth';
+const API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || (
+  window.location.hostname.includes('devtunnels.ms')
+    ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api/auth'
+    : 'http://localhost:5000/api/auth'
+);
 
 const RegisterForm = ({ onSwitchToLogin }) => {
   const [name, setName] = useState('');

@@ -26,22 +26,25 @@ bcrypt = Bcrypt()
 
 def create_app():
     app = Flask(__name__)
+    frontend_origins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+        "http://127.0.0.1:5176",
+        "http://127.0.0.1:5177",
+        "https://cw0xw4lf-5173.inc1.devtunnels.ms"
+    ]
+
     # Allow dev origins (both localhost and 127.0.0.1) for the frontend dev server.
     # Using a resource pattern for /api/* keeps CORS limited to API endpoints.
     CORS(app, resources={
         r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:5176",
-                "http://localhost:5177",
-                "http://127.0.0.1:5174",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:5175",
-                "http://127.0.0.1:5176",
-                "http://127.0.0.1:5177"
-            ],
+            "origins": frontend_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -233,7 +236,10 @@ def create_app():
                 algorithm=app.config['JWT_ALGORITHM']
             )
 
-            frontend_base_url = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
+            frontend_base_url = os.getenv('FRONTEND_BASE_URL')
+            if not frontend_base_url:
+                request_origin = request.headers.get('Origin', '')
+                frontend_base_url = request_origin if request_origin in frontend_origins else 'http://localhost:5173'
             reset_link = f"{frontend_base_url}/?resetToken={reset_token}"
 
             # Development behavior: log reset link on server console.
