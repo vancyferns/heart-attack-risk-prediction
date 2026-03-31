@@ -10,7 +10,10 @@ werkzeug
 flask-bcrypt
 torch
 torchvision
+tensorflow
+protobuf>=3.20.3,<6.0.0
 xgboost
+opencv-python
 pillow
 numpy
 scikit-learn

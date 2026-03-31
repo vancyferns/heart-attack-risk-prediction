@@ -8,12 +8,18 @@ import xgboost as xgb
 import numpy as np
 import cv2
 from PIL import Image
+import tensorflow as tf
 import io
 
 # Define model paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
-UNET_PATH = os.path.join(MODELS_DIR, 'unet_pseudo_best.pth')
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+EXTERNAL_MODELS_DIR = os.path.join(PROJECT_ROOT, 'models')
+KERAS_UNET_CANDIDATES = [
+    os.path.join(MODELS_DIR, 'best_model.keras'),
+    os.path.join(EXTERNAL_MODELS_DIR, 'best_model.keras')
+]
 EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet_b3_best_fusion.pth')
 XGBOOST_PATH = os.path.join(MODELS_DIR, 'xgb_model.json')
 
@@ -21,7 +27,52 @@ XGBOOST_PATH = os.path.join(MODELS_DIR, 'xgb_model.json')
 unet_model = None
 efficientnet_model = None
 xgboost_model = None
+unet_input_size = (384, 384)
+unet_input_channels = 3
+keras_unet_path = None
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
+def _resolve_keras_unet_path():
+    """Return the first existing path for the Keras UNet checkpoint."""
+    for candidate in KERAS_UNET_CANDIDATES:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return None
+
+
+def _configure_unet_input_metadata(model):
+    """Infer input size/channels from the loaded Keras model."""
+    global unet_input_size, unet_input_channels
+    try:
+        input_shape = getattr(model, 'input_shape', None)
+        if input_shape and len(input_shape) >= 4:
+            _, height, width, channels = input_shape
+            if height and width:
+                unet_input_size = (int(width), int(height))
+            if channels:
+                unet_input_channels = int(channels)
+    except Exception:
+        # Best-effort inference; fall back to defaults
+        pass
+
+
+def _prepare_unet_input(image: Image.Image):
+    """Resize and normalize PIL image for the Keras UNet model."""
+    if unet_model is None:
+        raise ValueError("UNet model not loaded")
+
+    target_size = unet_input_size or (384, 384)
+    resized = image.resize(target_size, Image.BILINEAR)
+
+    if unet_input_channels == 1:
+        resized = resized.convert('L')
+        arr = np.array(resized, dtype=np.float32) / 255.0
+        arr = arr[..., np.newaxis]
+    else:
+        arr = np.array(resized, dtype=np.float32) / 255.0
+
+    return np.expand_dims(arr, axis=0)
 
 
 # ===========================
@@ -225,29 +276,23 @@ def create_efficientnet_model(num_classes=1):
 # ===========================
 def load_models():
     """Load all three models into memory"""
-    global unet_model, efficientnet_model, xgboost_model
+    global unet_model, efficientnet_model, xgboost_model, keras_unet_path
     
     print("🔄 Loading ML models...")
     
-    # Load UNet
+    # Load Keras UNet
     try:
-        if os.path.exists(UNET_PATH):
-            checkpoint = torch.load(UNET_PATH, map_location=device)
-            unet_state = _extract_state_dict(checkpoint)
-
-            if _looks_like_legacy_unet(unet_state):
-                unet_model = UNetLegacy(n_channels=3, n_classes=1)
-            else:
-                unet_model = UNet(in_channels=3, out_channels=1)
-
-            unet_model.load_state_dict(unet_state)
-            unet_model.to(device)
-            unet_model.eval()
-            print(f"✅ UNet model loaded from {UNET_PATH}")
+        resolved_path = _resolve_keras_unet_path()
+        if resolved_path:
+            unet_model = tf.keras.models.load_model(resolved_path, compile=False)
+            keras_unet_path = resolved_path
+            _configure_unet_input_metadata(unet_model)
+            print(f"✅ Keras UNet model loaded from {resolved_path}")
         else:
-            print(f"⚠️  UNet model not found at {UNET_PATH}")
+            print("⚠️  Keras UNet model not found. Expected at one of:"
+                  f" {', '.join(p for p in KERAS_UNET_CANDIDATES if p)}")
     except Exception as e:
-        print(f"❌ Failed to load UNet: {e}")
+        print(f"❌ Failed to load Keras UNet: {e}")
     
     # Load EfficientNet
     try:
@@ -300,14 +345,6 @@ def get_efficientnet_transforms():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-def get_unet_transforms():
-    """Exact transforms used during UNet training"""
-    return transforms.Compose([
-        transforms.Resize((384, 384)), # UNet trained on 384x384
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
 
 # ===========================
 # Prediction Functions
@@ -327,13 +364,9 @@ def predict_from_image(image_bytes):
         raw_cv2 = np.array(raw_pil) # Convert to CV2 format for overlay later
         
         # 2. Get UNet Segmentation Mask
-        unet_t = get_unet_transforms()
-        unet_input = unet_t(raw_pil).unsqueeze(0).to(device)
-        
-        with torch.no_grad():
-            unet_output = unet_model(unet_input)
-            # Binarize the mask at 0.5 threshold
-            mask = (unet_output.squeeze().cpu().numpy() > 0.5).astype(np.uint8) * 255
+        unet_input = _prepare_unet_input(raw_pil)
+        unet_output = unet_model.predict(unet_input, verbose=0)
+        mask = (np.squeeze(unet_output) > 0.5).astype(np.uint8) * 255
             
         # 3. Fuse the Mask with the Original Image
         fused_cv2 = apply_mask_overlay(raw_cv2, mask)
@@ -388,12 +421,9 @@ def segment_image_with_unet(image_bytes):
     
     try:
         raw_pil = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-        unet_t = get_unet_transforms()
-        image_tensor = unet_t(raw_pil).unsqueeze(0).to(device)
-        
-        with torch.no_grad():
-            segmentation = unet_model(image_tensor)
-            mask = segmentation.squeeze().cpu().numpy()
+        image_tensor = _prepare_unet_input(raw_pil)
+        segmentation = unet_model.predict(image_tensor, verbose=0)
+        mask = np.squeeze(segmentation)
             
         return mask
     
