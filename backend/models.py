@@ -28,6 +28,7 @@ class User(Document):
 class HealthRecord(Document):
     meta = {'collection': 'health_records'}
     user = ReferenceField(User, reverse_delete_rule=CASCADE, required=True) # Links the record to the User
+    patient_name = StringField(required=False)
     date_submitted = DateTimeField(default=datetime.utcnow)
     risk_score = FloatField(required=True)
     prediction_result = StringField(required=True)
@@ -50,6 +51,7 @@ class HealthRecord(Document):
         # Helper for sending JSON responses
         return {
             'id': str(self.id),
+            'patient_name': self.patient_name,
             'date_submitted': self.date_submitted.isoformat() if self.date_submitted else None,
             'risk_score': self.risk_score,
             'prediction_result': self.prediction_result,

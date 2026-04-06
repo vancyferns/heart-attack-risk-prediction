@@ -3,6 +3,7 @@ flask-cors
 python-dotenv
 mongoengine
 pymongo
+dnspython
 pandas
 joblib
 PyJWT
@@ -13,4 +14,7 @@ torchvision
 xgboost
 pillow
 numpy
+opencv-python
 scikit-learn
+cloudinary
+requests

@@ -8,7 +8,13 @@ import Results from './Results';
 import Settings from './Settings';
 import '../assets/Dashboard.css';
 
-const Dashboard = ({ user, onUserUpdate, onLogout }) => {
+const RECORDS_API_BASE = import.meta.env.VITE_API_BASE_URL || (
+  window.location.hostname.includes('devtunnels.ms')
+    ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api'
+    : 'http://127.0.0.1:5000/api'
+);
+
+const Dashboard = ({ user, onUserUpdate, onLogout, onBackToLanding }) => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [patientData, setPatientData] = useState(null);
   const [scanResults, setScanResults] = useState(null);
@@ -57,7 +63,7 @@ const Dashboard = ({ user, onUserUpdate, onLogout }) => {
       case 'profile':
         return <ProfileView user={user} onBack={() => setCurrentView('dashboard')} />;
       default:
-        return <HomeView onNavigate={handleNavigate} user={user} />;
+        return <HomeView onNavigate={handleNavigate} user={user} onBack={onBackToLanding} />;
     }
   };
 
@@ -76,7 +82,7 @@ const Dashboard = ({ user, onUserUpdate, onLogout }) => {
   );
 };
 
-const HomeView = ({ onNavigate, user }) => (
+const HomeView = ({ onNavigate, user, onBack }) => (
   <motion.div
     className="home-view"
     initial={{ opacity: 0, y: 20 }}
@@ -89,7 +95,10 @@ const HomeView = ({ onNavigate, user }) => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2 }}
     >
-      <h1>Welcome, {user.name}!</h1>
+      <div className="home-header-top">
+        <h1>Welcome, {user.name}!</h1>
+        <button className="dashboard-back-btn" onClick={onBack}>← Back</button>
+      </div>
       <p className="subtitle">Ophthalmology Eye Scan & Heart Attack Risk Prediction System</p>
     </motion.div>
 
@@ -227,7 +236,7 @@ const AnalyticsView = ({ onBack }) => {
       setLoading(true);
       const token = localStorage.getItem('token');
       try {
-        const res = await fetch('http://127.0.0.1:5000/api/records', {
+        const res = await fetch(`${RECORDS_API_BASE}/records`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' }
         });
         if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -309,7 +318,7 @@ const HistoryView = ({ onBack }) => {
       }
       
       try {
-        const res = await fetch('http://127.0.0.1:5000/api/records', {
+        const res = await fetch(`${RECORDS_API_BASE}/records`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -357,11 +366,8 @@ const HistoryView = ({ onBack }) => {
             records.map(r => (
               <div key={r.id} className="history-item">
                 <div className="history-meta">
-                  <strong>{r.prediction_result}</strong>
-                  <span>{new Date(r.date_submitted).toLocaleString()}</span>
-                </div>
-                <div className="history-body">
-                  <span>Risk Score: {r.risk_score}</span>
+                  <strong>{r.patient_name || r.name || r.patientName || 'Patient Name Not Available'}</strong>
+                  <span>{new Date(r.date_submitted).toLocaleDateString()}</span>
                 </div>
               </div>
             ))

@@ -1,10 +1,12 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torchvision import models
 import xgboost as xgb
 import numpy as np
+import cv2
 from PIL import Image
 import io
 
@@ -97,6 +99,113 @@ class UNet(nn.Module):
         return torch.sigmoid(self.out(dec1))
 
 
+class DoubleConv(nn.Module):
+    """(conv => BN => ReLU) * 2"""
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class Down(nn.Module):
+    """Downscaling with maxpool then double conv"""
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.pool_conv = nn.Sequential(
+            nn.MaxPool2d(2),
+            DoubleConv(in_channels, out_channels)
+        )
+
+    def forward(self, x):
+        return self.pool_conv(x)
+
+
+class Up(nn.Module):
+    """Upscaling then double conv"""
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.conv = DoubleConv(in_channels, out_channels)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+
+        diff_y = x2.size()[2] - x1.size()[2]
+        diff_x = x2.size()[3] - x1.size()[3]
+
+        x1 = F.pad(
+            x1,
+            [
+                diff_x // 2,
+                diff_x - diff_x // 2,
+                diff_y // 2,
+                diff_y - diff_y // 2,
+            ],
+        )
+
+        x = torch.cat([x2, x1], dim=1)
+        return self.conv(x)
+
+
+class UNetLegacy(nn.Module):
+    """UNet variant matching the precise dimensions of the trained UNetSmall checkpoint."""
+    def __init__(self, n_channels=3, n_classes=1):
+        super().__init__()
+        # EXACT SHAPES FOR 64-CHANNEL BASE
+        self.inc = DoubleConv(n_channels, 64)
+        self.down1 = Down(64, 128)
+        self.down2 = Down(128, 256)
+        self.down3 = Down(256, 512)
+        self.down4 = Down(512, 512)  # Custom flat bottleneck
+        
+        # Up blocks
+        self.up1 = Up(1024, 256)  
+        self.up2 = Up(512, 128)   
+        self.up3 = Up(256, 64)    
+        self.up4 = Up(128, 64)    
+        
+        self.outc = nn.Conv2d(64, n_classes, kernel_size=1)
+
+    def forward(self, x):
+        x1 = self.inc(x)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
+        x = self.up1(x5, x4)
+        x = self.up2(x, x3)
+        x = self.up3(x, x2)
+        x = self.up4(x, x1)
+        logits = self.outc(x)
+        return torch.sigmoid(logits)
+
+
+def _extract_state_dict(checkpoint):
+    """Extract model state_dict from various checkpoint formats."""
+    if isinstance(checkpoint, dict):
+        for key in ('state_dict', 'model_state', 'model_state_dict', 'net', 'model'):
+            if key in checkpoint and isinstance(checkpoint[key], dict):
+                return checkpoint[key]
+    return checkpoint
+
+
+def _looks_like_legacy_unet(state_dict):
+    """Detect legacy UNet checkpoints by key namespace."""
+    if not isinstance(state_dict, dict):
+        return False
+    keys = list(state_dict.keys())
+    return any(k.startswith('inc.') for k in keys) and any(k.startswith('up1.') for k in keys)
+
+
 # ===========================
 # EfficientNet Model Setup
 # ===========================
@@ -123,18 +232,15 @@ def load_models():
     # Load UNet
     try:
         if os.path.exists(UNET_PATH):
-            unet_model = UNet(in_channels=3, out_channels=1)
             checkpoint = torch.load(UNET_PATH, map_location=device)
-            # Handle different checkpoint formats
-            if isinstance(checkpoint, dict):
-                if 'model_state' in checkpoint:
-                    unet_model.load_state_dict(checkpoint['model_state'])
-                elif 'model_state_dict' in checkpoint:
-                    unet_model.load_state_dict(checkpoint['model_state_dict'])
-                else:
-                    unet_model.load_state_dict(checkpoint)
+            unet_state = _extract_state_dict(checkpoint)
+
+            if _looks_like_legacy_unet(unet_state):
+                unet_model = UNetLegacy(n_channels=3, n_classes=1)
             else:
-                unet_model.load_state_dict(checkpoint)
+                unet_model = UNet(in_channels=3, out_channels=1)
+
+            unet_model.load_state_dict(unet_state)
             unet_model.to(device)
             unet_model.eval()
             print(f"✅ UNet model loaded from {UNET_PATH}")
@@ -176,23 +282,31 @@ def load_models():
 
 
 # ===========================
-# Image Preprocessing
+# Image Preprocessing & Fusion
 # ===========================
-def get_image_transforms():
-    """Get image preprocessing transforms"""
+def apply_mask_overlay(img_rgb, mask_gray, alpha=0.35):
+    """Highlights the U-Net vessels in red over the original image."""
+    mask_resized = cv2.resize(mask_gray, (img_rgb.shape[1], img_rgb.shape[0]), interpolation=cv2.INTER_NEAREST)
+    red_mask = np.zeros_like(img_rgb)
+    red_mask[..., 0] = mask_resized  # Add to Red channel
+    blended = (img_rgb.astype(np.float32) * (1.0 - alpha) + red_mask.astype(np.float32) * alpha)
+    return np.clip(blended, 0, 255).astype(np.uint8)
+
+def get_efficientnet_transforms():
+    """Exact transforms used during EfficientNet training"""
     return transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((300, 300)), # EfficientNet-B3 requires 300x300
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-
-def preprocess_image(image_bytes):
-    """Preprocess image for model input"""
-    image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-    transform = get_image_transforms()
-    image_tensor = transform(image).unsqueeze(0)  # Add batch dimension
-    return image_tensor.to(device)
+def get_unet_transforms():
+    """Exact transforms used during UNet training"""
+    return transforms.Compose([
+        transforms.Resize((384, 384)), # UNet trained on 384x384
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
 
 # ===========================
@@ -200,40 +314,59 @@ def preprocess_image(image_bytes):
 # ===========================
 def predict_from_image(image_bytes):
     """
-    Predict heart disease risk from eye scan image using EfficientNet
-    
-    Args:
-        image_bytes: Raw image bytes
-        
-    Returns:
-        dict: Prediction results with risk_score, risk_level, and confidence
+    1. Pass raw image through UNet to get vessels
+    2. Overlay vessels in red onto the original image
+    3. Pass the fused image to EfficientNet for risk prediction
     """
-    if efficientnet_model is None:
-        raise ValueError("EfficientNet model not loaded")
+    if efficientnet_model is None or unet_model is None:
+        raise ValueError("Models not fully loaded")
     
     try:
-        # Preprocess image
-        image_tensor = preprocess_image(image_bytes)
+        # 1. Load the raw image
+        raw_pil = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        raw_cv2 = np.array(raw_pil) # Convert to CV2 format for overlay later
         
-        # Make prediction for 1-class (sigmoid) output
+        # 2. Get UNet Segmentation Mask
+        unet_t = get_unet_transforms()
+        unet_input = unet_t(raw_pil).unsqueeze(0).to(device)
+        
         with torch.no_grad():
-            outputs = efficientnet_model(image_tensor)
-            # outputs shape: [batch, 1], apply sigmoid
+            unet_output = unet_model(unet_input)
+            # Binarize the mask at 0.5 threshold
+            mask = (unet_output.squeeze().cpu().numpy() > 0.5).astype(np.uint8) * 255
+            
+        # 3. Fuse the Mask with the Original Image
+        fused_cv2 = apply_mask_overlay(raw_cv2, mask)
+        fused_pil = Image.fromarray(fused_cv2)
+        
+        # 4. Prepare Fused Image for EfficientNet
+        eff_t = get_efficientnet_transforms()
+        eff_input = eff_t(fused_pil).unsqueeze(0).to(device)
+        
+        # 5. Make Final Prediction
+        with torch.no_grad():
+            outputs = efficientnet_model(eff_input)
             prob = torch.sigmoid(outputs)[0][0].item() * 100
-            # Confidence is the distance from 50 (uncertainty)
-            confidence = abs(prob - 50) * 2
-            # Determine risk level
+            
+            # --- PIECEWISE CONFIDENCE MATH ---
+            if prob >= 40:
+                confidence = ((prob - 40.0) / 60.0) * 100
+            else:
+                confidence = ((40.0 - prob) / 40.0) * 100
+            
+            # Using your optimized clinical thresholds
             if prob >= 70:
                 risk_level = "High"
             elif prob >= 40:
                 risk_level = "Medium"
             else:
                 risk_level = "Low"
+                
             return {
                 'risk_score': round(prob, 2),
                 'risk_level': risk_level,
                 'confidence': round(confidence, 2),
-                'prediction': int(prob >= 50)
+                'prediction': int(prob >= 40)
             }
     
     except Exception as e:
@@ -254,7 +387,9 @@ def segment_image_with_unet(image_bytes):
         raise ValueError("UNet model not loaded")
     
     try:
-        image_tensor = preprocess_image(image_bytes)
+        raw_pil = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        unet_t = get_unet_transforms()
+        image_tensor = unet_t(raw_pil).unsqueeze(0).to(device)
         
         with torch.no_grad():
             segmentation = unet_model(image_tensor)
@@ -300,6 +435,12 @@ def predict_from_tabular(features):
         # Convert to risk score (0-100)
         risk_score = float(prediction * 100)
         
+        # --- PIECEWISE CONFIDENCE MATH ---
+        if risk_score >= 40:
+            confidence = ((risk_score - 40.0) / 60.0) * 100
+        else:
+            confidence = ((40.0 - risk_score) / 40.0) * 100
+        
         # Determine risk level
         if risk_score >= 70:
             risk_level = "High"
@@ -311,7 +452,9 @@ def predict_from_tabular(features):
         return {
             'risk_score': round(risk_score, 2),
             'risk_level': risk_level,
-            'features_used': feature_names
+            'confidence': round(confidence, 2),
+            'features_used': feature_names,
+            'prediction': int(risk_score >= 40)
         }
     
     except ValueError as ve:
@@ -351,17 +494,28 @@ def predict_combined(image_bytes, features=None):
         combined_score = (results['image_risk_score'] * 0.6 + results['tabular_risk_score'] * 0.4)
         results['combined_risk_score'] = round(combined_score, 2)
         
+        # --- PIECEWISE CONFIDENCE MATH ---
+        if combined_score >= 40:
+            combined_confidence = ((combined_score - 40.0) / 60.0) * 100
+        else:
+            combined_confidence = ((40.0 - combined_score) / 40.0) * 100
+            
+        results['combined_confidence'] = round(combined_confidence, 2)
+        
         if combined_score >= 70:
             results['final_risk_level'] = "High"
         elif combined_score >= 40:
             results['final_risk_level'] = "Medium"
         else:
             results['final_risk_level'] = "Low"
+            
     elif 'image_risk_score' in results:
         results['combined_risk_score'] = results['image_risk_score']
+        results['combined_confidence'] = results['image_prediction']['confidence']
         results['final_risk_level'] = results['image_prediction']['risk_level']
     elif 'tabular_risk_score' in results:
         results['combined_risk_score'] = results['tabular_risk_score']
+        results['combined_confidence'] = results['tabular_prediction']['confidence']
         results['final_risk_level'] = results['tabular_prediction']['risk_level']
     else:
         raise ValueError("No valid prediction inputs provided")

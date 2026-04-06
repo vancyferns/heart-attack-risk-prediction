@@ -17,9 +17,19 @@ const PatientDetails = ({ onSubmit, onBack }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    let normalizedValue = value;
+
+    if (name === 'email') {
+      normalizedValue = value.toLowerCase().replace(/\s+/g, '');
+    }
+
+    if (name === 'contactNumber') {
+      normalizedValue = value.replace(/\D/g, '').slice(0, 10);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: normalizedValue
     }));
     // Clear error for this field when user starts typing
     if (errors[name]) {
@@ -32,12 +42,42 @@ const PatientDetails = ({ onSubmit, onBack }) => {
 
   const validateForm = () => {
     const newErrors = {};
+    const nameValue = formData.name.trim();
+    const ageValue = Number(formData.age);
+    const emailValue = formData.email.trim();
+    const phoneValue = formData.contactNumber.trim();
+    const addressValue = formData.address.trim();
 
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.age || formData.age < 1 || formData.age > 120) newErrors.age = 'Valid age is required';
-    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) newErrors.email = 'Valid email is required';
-    if (!formData.contactNumber.match(/^\d{10}$/)) newErrors.contactNumber = 'Valid 10-digit contact number is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    const namePattern = /^[A-Za-z ]{2,}$/;
+    const lowerCaseEmailPattern = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+
+    if (!nameValue) {
+      newErrors.name = 'Name is required';
+    } else if (!namePattern.test(nameValue)) {
+      newErrors.name = 'Name should contain only letters and spaces';
+    }
+
+    if (!formData.age || Number.isNaN(ageValue)) {
+      newErrors.age = 'Age is required';
+    } else if (!Number.isInteger(ageValue) || ageValue < 1 || ageValue > 120) {
+      newErrors.age = 'Enter a valid age between 1 and 120';
+    }
+
+    if (!emailValue) {
+      newErrors.email = 'Email is required';
+    } else if (!lowerCaseEmailPattern.test(emailValue)) {
+      newErrors.email = 'Enter a valid lowercase email (example: name@gmail.com)';
+    }
+
+    if (!phoneValue) {
+      newErrors.contactNumber = 'Contact number is required';
+    } else if (!/^\d{10}$/.test(phoneValue)) {
+      newErrors.contactNumber = 'Contact number must be exactly 10 digits';
+    }
+
+    if (!addressValue) {
+      newErrors.address = 'Address is required';
+    }
 
     return newErrors;
   };
@@ -126,6 +166,7 @@ const PatientDetails = ({ onSubmit, onBack }) => {
                 onChange={handleChange}
                 placeholder="Enter 10-digit phone number"
                 pattern="\d{10}"
+                maxLength="10"
                 disabled={isSubmitting}
               />
               {errors.contactNumber && <span className="error-text">{errors.contactNumber}</span>}

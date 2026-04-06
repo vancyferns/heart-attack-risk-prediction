@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import '../assets/Settings.css';
 
 const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
+  const [isAndroidMobile, setIsAndroidMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -33,6 +34,21 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    const updateAndroidMobileState = () => {
+      const isAndroid = /Android/i.test(window.navigator.userAgent);
+      const isMobileViewport = window.matchMedia('(max-width: 768px)').matches;
+      setIsAndroidMobile(isAndroid && isMobileViewport);
+    };
+
+    updateAndroidMobileState();
+    window.addEventListener('resize', updateAndroidMobileState);
+
+    return () => {
+      window.removeEventListener('resize', updateAndroidMobileState);
+    };
+  }, []);
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
@@ -182,7 +198,7 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
   };
 
   return (
-    <div className="settings-container">
+    <div className={`settings-container${isAndroidMobile ? ' android-mobile' : ''}`}>
       <div className="settings-header">
         <h1>Settings</h1>
         <button className="btn btn-back" onClick={() => (onBack ? onBack() : window.history.back())}>

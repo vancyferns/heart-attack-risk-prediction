@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import '../assets/HealthDataForm.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (
+  window.location.hostname.includes('devtunnels.ms')
+    ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api'
+    : 'http://127.0.0.1:5000/api'
+);
 
 const HealthDataForm = ({ onSubmit, patientData }) => {
   const [formData, setFormData] = useState({

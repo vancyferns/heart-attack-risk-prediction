@@ -227,10 +227,14 @@
     width: 32px;
     height: 32px;
     padding: 0;
+    line-height: 0;
+    transition: none;
     z-index: 3;
 }
 
 .toggle-password svg {
+    display: block;
+    flex-shrink: 0;
     width: 20px;
     height: 20px;
 }
@@ -240,7 +244,13 @@
 }
 
 .toggle-password:hover {
-    color: #E075A0;
+    color: #666666;
+    transform: translateY(-50%);
+}
+
+.toggle-password:focus,
+.toggle-password:active {
+    transform: translateY(-50%);
 }
 
 .forgot-password-link {

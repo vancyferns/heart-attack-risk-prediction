@@ -26,22 +26,25 @@ bcrypt = Bcrypt()
 
 def create_app():
     app = Flask(__name__)
+    frontend_origins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+        "http://127.0.0.1:5176",
+        "http://127.0.0.1:5177",
+        "https://cw0xw4lf-5173.inc1.devtunnels.ms"
+    ]
+
     # Allow dev origins (both localhost and 127.0.0.1) for the frontend dev server.
     # Using a resource pattern for /api/* keeps CORS limited to API endpoints.
     CORS(app, resources={
         r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:5176",
-                "http://localhost:5177",
-                "http://127.0.0.1:5174",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:5175",
-                "http://127.0.0.1:5176",
-                "http://127.0.0.1:5177"
-            ],
+            "origins": frontend_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -233,7 +236,10 @@ def create_app():
                 algorithm=app.config['JWT_ALGORITHM']
             )
 
-            frontend_base_url = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
+            frontend_base_url = os.getenv('FRONTEND_BASE_URL')
+            if not frontend_base_url:
+                request_origin = request.headers.get('Origin', '')
+                frontend_base_url = request_origin if request_origin in frontend_origins else 'http://localhost:5173'
             reset_link = f"{frontend_base_url}/?resetToken={reset_token}"
 
             # Development behavior: log reset link on server console.
@@ -315,6 +321,7 @@ def create_app():
             # Build record using available fields (many are optional now)
             record = HealthRecord(
                 user=current_user,
+                patient_name=(data.get('patient_name') or '').strip() or None,
                 risk_score=float(data.get('risk_score')),
                 prediction_result=str(data.get('prediction_result')),
                 age=float(data.get('age')) if data.get('age') is not None else None,
@@ -337,6 +344,12 @@ def create_app():
     # --- PREDICTION ROUTES (SECURED) ---
     # ---------------------------------
 
+    def is_allowed_eye_image(image_file):
+        allowed_mimetypes = {'image/jpeg', 'image/png'}
+        filename = (image_file.filename or '').lower()
+        has_valid_extension = filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png')
+        return has_valid_extension and image_file.mimetype in allowed_mimetypes
+
     @app.route('/api/predict/image', methods=['POST'])
     @jwt_required
     def predict_image(current_user):
@@ -345,12 +358,17 @@ def create_app():
         Expects: multipart/form-data with 'image' file
         """
         try:
+            patient_name = (request.form.get('patient_name') or '').strip() or None
+
             if 'image' not in request.files:
                 return jsonify({'msg': 'No image file provided'}), 400
             
             image_file = request.files['image']
             if image_file.filename == '':
                 return jsonify({'msg': 'No image file selected'}), 400
+
+            if not is_allowed_eye_image(image_file):
+                return jsonify({'msg': 'Invalid file type. Upload retinal images in JPG or PNG format only.'}), 400
             
             # Save the uploaded image to disk
             original_filename = secure_filename(image_file.filename)
@@ -372,6 +390,7 @@ def create_app():
             # Save to database with actual file path
             record = HealthRecord(
                 user=current_user,
+                patient_name=patient_name,
                 risk_score=prediction['risk_score'],
                 prediction_result=prediction['risk_level'],
                 image_url=filename  # Store just the filename, not full path
@@ -397,6 +416,7 @@ def create_app():
         """
         try:
             data = request.get_json() or {}
+            patient_name = (data.get('patient_name') or '').strip() or None
             
             # Required features for XGBoost model
             required_features = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']
@@ -415,6 +435,7 @@ def create_app():
             # Save to database
             record = HealthRecord(
                 user=current_user,
+                patient_name=patient_name,
                 risk_score=prediction['risk_score'],
                 prediction_result=prediction['risk_level'],
                 age=features['age'],
@@ -455,6 +476,9 @@ def create_app():
             if 'image' in request.files:
                 image_file = request.files['image']
                 if image_file.filename != '':
+                    if not is_allowed_eye_image(image_file):
+                        return jsonify({'msg': 'Invalid file type. Upload retinal images in JPG or PNG format only.'}), 400
+
                     # Save the uploaded image to disk
                     original_filename = secure_filename(image_file.filename)
                     timestamp = datetime.utcnow().timestamp()
@@ -473,6 +497,8 @@ def create_app():
                 data = request.form.to_dict()
             else:
                 data = request.get_json() or {}
+
+            patient_name = (data.get('patient_name') or '').strip() or None
             
             # Prepare features if all are present
             features = None
@@ -486,6 +512,7 @@ def create_app():
             # Save to database
             record = HealthRecord(
                 user=current_user,
+                patient_name=patient_name,
                 risk_score=prediction['combined_risk_score'],
                 prediction_result=prediction['final_risk_level'],
                 age=features['age'] if features else None,
