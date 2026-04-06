@@ -9,6 +9,7 @@ joblib
 PyJWT
 werkzeug
 flask-bcrypt
+gunicorn
 torch
 torchvision
 pillow

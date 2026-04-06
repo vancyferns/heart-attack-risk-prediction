@@ -40,6 +40,16 @@ def create_app():
         "https://cw0xw4lf-5173.inc1.devtunnels.ms"
     ]
 
+    extra_origins = os.getenv('ALLOWED_ORIGINS', '')
+    if extra_origins:
+        frontend_origins.extend(
+            [origin.strip() for origin in extra_origins.split(',') if origin.strip()]
+        )
+
+    frontend_origin = os.getenv('FRONTEND_ORIGIN')
+    if frontend_origin:
+        frontend_origins.append(frontend_origin.rstrip('/'))
+
     # Allow dev origins (both localhost and 127.0.0.1) for the frontend dev server.
     # Using a resource pattern for /api/* keeps CORS limited to API endpoints.
     CORS(app, resources={
@@ -550,4 +560,6 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, port=5000)
+    port = int(os.getenv('PORT', '5000'))
+    debug = os.getenv('FLASK_DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
+    app.run(host='0.0.0.0', debug=debug, port=port)
