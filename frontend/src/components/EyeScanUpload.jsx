@@ -16,12 +16,16 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
 
-  const allowedFormats = ['image/jpeg', 'image/png', 'image/gif'];
+  const allowedFormats = ['image/jpeg', 'image/png'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png'];
   const maxFileSize = 10 * 1024 * 1024; // 10MB
 
   const validateFile = (file) => {
-    if (!allowedFormats.includes(file.type)) {
-      setError('Invalid file format. Please upload JPG, PNG, or GIF.');
+    const lowerName = file.name?.toLowerCase() || '';
+    const hasValidExtension = allowedExtensions.some((ext) => lowerName.endsWith(ext));
+
+    if (!allowedFormats.includes(file.type) || !hasValidExtension) {
+      setError('Invalid file format. Please upload retinal images in JPG or PNG format only.');
       return false;
     }
     if (file.size > maxFileSize) {
@@ -31,17 +35,109 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
     return true;
   };
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && validateFile(selectedFile)) {
-      setFile(selectedFile);
-      setError('');
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
+  const validateRetinalImage = (selectedFile) => {
+    return new Promise((resolve) => {
+      const image = new Image();
+      const objectUrl = URL.createObjectURL(selectedFile);
+
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const sampleSize = 180;
+        canvas.width = sampleSize;
+        canvas.height = sampleSize;
+        ctx.drawImage(image, 0, 0, sampleSize, sampleSize);
+
+        const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize);
+        let borderPixelCount = 0;
+        let darkBorderPixelCount = 0;
+        let centerPixelCount = 0;
+        let centerLuminanceTotal = 0;
+        let centerRedDominanceTotal = 0;
+
+        const centerX = sampleSize / 2;
+        const centerY = sampleSize / 2;
+        const radius = sampleSize * 0.34;
+
+        for (let y = 0; y < sampleSize; y += 1) {
+          for (let x = 0; x < sampleSize; x += 1) {
+            const index = (y * sampleSize + x) * 4;
+            const r = data[index];
+            const g = data[index + 1];
+            const b = data[index + 2];
+            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            const isBorder = x < 16 || y < 16 || x > sampleSize - 16 || y > sampleSize - 16;
+            if (isBorder) {
+              borderPixelCount += 1;
+              if (luminance < 70) darkBorderPixelCount += 1;
+            }
+
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const inCenterCircle = dx * dx + dy * dy <= radius * radius;
+            if (inCenterCircle) {
+              centerPixelCount += 1;
+              centerLuminanceTotal += luminance;
+              centerRedDominanceTotal += (r - (g + b) / 2);
+            }
+          }
+        }
+
+        const darkBorderRatio = borderPixelCount > 0 ? darkBorderPixelCount / borderPixelCount : 0;
+        const avgCenterLuminance = centerPixelCount > 0 ? centerLuminanceTotal / centerPixelCount : 0;
+        const avgRedDominance = centerPixelCount > 0 ? centerRedDominanceTotal / centerPixelCount : 0;
+
+        URL.revokeObjectURL(objectUrl);
+
+        const looksRetinal = darkBorderRatio > 0.35 && avgCenterLuminance > 35 && avgCenterLuminance < 210 && avgRedDominance > 5;
+
+        if (!looksRetinal) {
+          resolve({
+            isValid: false,
+            message: 'Please upload a clear retinal eye scan image only. Other image types are not accepted.'
+          });
+          return;
+        }
+
+        resolve({ isValid: true });
       };
-      reader.readAsDataURL(selectedFile);
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({
+          isValid: false,
+          message: 'Unable to read this image. Please upload a valid retinal JPG or PNG image.'
+        });
+      };
+
+      image.src = objectUrl;
+    });
+  };
+
+  const processSelectedFile = async (selectedFile) => {
+    if (!selectedFile || !validateFile(selectedFile)) return;
+
+    const retinalValidation = await validateRetinalImage(selectedFile);
+    if (!retinalValidation.isValid) {
+      setFile(null);
+      setPreview(null);
+      setError(retinalValidation.message);
+      return;
     }
+
+    setFile(selectedFile);
+    setError('');
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result);
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files?.[0];
+    await processSelectedFile(selectedFile);
   };
 
   const handleDrag = (e) => {
@@ -54,21 +150,13 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
     }
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile && validateFile(droppedFile)) {
-      setFile(droppedFile);
-      setError('');
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(droppedFile);
-    }
+    await processSelectedFile(droppedFile);
   };
 
   const handleSubmit = (e) => {
@@ -84,6 +172,7 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
     // Create FormData to send image to backend
     const formData = new FormData();
     formData.append('image', file);
+    formData.append('patient_name', patientData?.name || '');
 
     const token = localStorage.getItem('token');
 
@@ -207,7 +296,7 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
               type="file"
               id="file-input"
               onChange={handleFileChange}
-              accept="image/jpeg,image/png,image/gif"
+              accept="image/jpeg,image/png"
               disabled={isAnalyzing}
               style={{ display: 'none' }}
             />
@@ -219,6 +308,7 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
             <h4>Image Requirements:</h4>
             <ul>
               <li>Format: JPG, PNG</li>
+              <li>Image type: Retinal eye scan only</li>
               <li>Maximum file size: 10MB</li>
               
   

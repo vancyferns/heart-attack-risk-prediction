@@ -366,11 +366,8 @@ const HistoryView = ({ onBack }) => {
             records.map(r => (
               <div key={r.id} className="history-item">
                 <div className="history-meta">
-                  <strong>{r.prediction_result}</strong>
-                  <span>{new Date(r.date_submitted).toLocaleString()}</span>
-                </div>
-                <div className="history-body">
-                  <span>Risk Score: {r.risk_score}</span>
+                  <strong>{r.patient_name || r.name || r.patientName || 'Patient Name Not Available'}</strong>
+                  <span>{new Date(r.date_submitted).toLocaleDateString()}</span>
                 </div>
               </div>
             ))
