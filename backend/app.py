@@ -7,6 +7,9 @@ from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from mongoengine import connect
 from werkzeug.utils import secure_filename
+import requests
+import cloudinary
+import cloudinary.uploader
 
 # Import the JWT verification decorator from the middleware file
 from auth_middleware import jwt_required
@@ -52,6 +55,13 @@ def create_app():
 
     app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'default_secret_key')
     app.config['JWT_ALGORITHM'] = 'HS256'
+
+    cloudinary.config(
+        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+        api_key=os.getenv('CLOUDINARY_API_KEY'),
+        api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+        secure=True,
+    )
     
     # Configure upload folder for images
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -94,6 +104,40 @@ def create_app():
     print("🤖 Initializing ML models...")
     initialize_models()
     print("✅ ML models ready for predictions")
+
+    def _cloudinary_enabled():
+        return all([
+            os.getenv('CLOUDINARY_CLOUD_NAME'),
+            os.getenv('CLOUDINARY_API_KEY'),
+            os.getenv('CLOUDINARY_API_SECRET')
+        ])
+
+    def upload_to_cloudinary(image_file, user_id):
+        if not _cloudinary_enabled():
+            raise RuntimeError(
+                'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.'
+            )
+
+        original_filename = secure_filename(image_file.filename or 'uploaded_image')
+        public_id = f"{user_id}/{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}_{original_filename}"
+
+        upload_result = cloudinary.uploader.upload(
+            image_file,
+            resource_type='image',
+            public_id=public_id,
+            overwrite=True,
+            folder='heart-risk'
+        )
+
+        secure_url = upload_result.get('secure_url')
+        if not secure_url:
+            raise RuntimeError('Cloudinary upload failed: secure_url missing in response')
+        return secure_url
+
+    def fetch_image_bytes_from_url(image_url):
+        response = requests.get(image_url, timeout=20)
+        response.raise_for_status()
+        return response.content
 
     # Simple health check
     @app.route('/', methods=['GET'])
@@ -357,37 +401,27 @@ def create_app():
             image_file = request.files['image']
             if image_file.filename == '':
                 return jsonify({'msg': 'No image file selected'}), 400
-            
-            # Save the uploaded image to disk
-            original_filename = secure_filename(image_file.filename)
-            timestamp = datetime.utcnow().timestamp()
-            # Create unique filename with timestamp
-            filename = f"{current_user.id}_{timestamp}_{original_filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            
-            # Save file to uploads folder
-            image_file.save(filepath)
-            
-            # Read image bytes for prediction
-            with open(filepath, 'rb') as f:
-                image_bytes = f.read()
+
+            cloudinary_url = upload_to_cloudinary(image_file, str(current_user.id))
+            image_bytes = fetch_image_bytes_from_url(cloudinary_url)
             
             # Make prediction
             prediction = predict_from_image(image_bytes)
             
-            # Save to database with actual file path
+            # Save Cloudinary image URL in MongoDB so it can be re-used for future predictions.
             record = HealthRecord(
                 user=current_user,
                 risk_score=prediction['risk_score'],
                 prediction_result=prediction['risk_level'],
-                image_url=filename  # Store just the filename, not full path
+                image_url=cloudinary_url
             )
             record.save()
             
             return jsonify({
                 'success': True,
                 'prediction': prediction,
-                'record_id': str(record.id)
+                'record_id': str(record.id),
+                'image_url': cloudinary_url
             }), 200
         
         except Exception as e:
@@ -457,22 +491,12 @@ def create_app():
         try:
             # Get image if provided and save it
             image_bytes = None
-            saved_filename = None
+            cloudinary_url = None
             if 'image' in request.files:
                 image_file = request.files['image']
                 if image_file.filename != '':
-                    # Save the uploaded image to disk
-                    original_filename = secure_filename(image_file.filename)
-                    timestamp = datetime.utcnow().timestamp()
-                    saved_filename = f"{current_user.id}_{timestamp}_{original_filename}"
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
-                    
-                    # Save file to uploads folder
-                    image_file.save(filepath)
-                    
-                    # Read image bytes for prediction
-                    with open(filepath, 'rb') as f:
-                        image_bytes = f.read()
+                    cloudinary_url = upload_to_cloudinary(image_file, str(current_user.id))
+                    image_bytes = fetch_image_bytes_from_url(cloudinary_url)
             
             # Get tabular data from form or JSON
             if request.form:
@@ -503,18 +527,49 @@ def create_app():
                 thalach=features['thalach'] if features else None,
                 exang=features['exang'] if features else None,
                 oldpeak=features['oldpeak'] if features else None,
-                image_url=saved_filename  # Store actual filename
+                image_url=cloudinary_url
             )
             record.save()
             
             return jsonify({
                 'success': True,
                 'prediction': prediction,
-                'record_id': str(record.id)
+                'record_id': str(record.id),
+                'image_url': cloudinary_url
             }), 200
         
         except Exception as e:
             print(f"❌ Combined prediction error: {str(e)}")
+            return jsonify({'msg': f'Prediction failed: {str(e)}'}), 500
+
+    @app.route('/api/predict/image/from-record/<record_id>', methods=['POST'])
+    @jwt_required
+    def predict_image_from_record(current_user, record_id):
+        """
+        Re-run image prediction using the Cloudinary URL stored in MongoDB.
+        """
+        try:
+            record = HealthRecord.objects(id=record_id, user=current_user.id).first()
+            if not record:
+                return jsonify({'msg': 'Record not found'}), 404
+
+            if not getattr(record, 'image_url', None):
+                return jsonify({'msg': 'No image URL stored for this record'}), 400
+
+            image_bytes = fetch_image_bytes_from_url(record.image_url)
+            prediction = predict_from_image(image_bytes)
+
+            return jsonify({
+                'success': True,
+                'record_id': str(record.id),
+                'image_url': record.image_url,
+                'prediction': prediction
+            }), 200
+
+        except requests.RequestException as e:
+            return jsonify({'msg': f'Unable to fetch image from stored URL: {str(e)}'}), 502
+        except Exception as e:
+            print(f"❌ Predict-from-record error: {str(e)}")
             return jsonify({'msg': f'Prediction failed: {str(e)}'}), 500
 
     # Generic exception handler that returns JSON so the frontend gets a meaningful
