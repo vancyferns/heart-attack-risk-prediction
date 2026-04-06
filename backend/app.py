@@ -418,7 +418,7 @@ def create_app():
             data = request.get_json() or {}
             patient_name = (data.get('patient_name') or '').strip() or None
             
-            # Required features for XGBoost model
+            # Required features for tabular risk scoring
             required_features = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']
             
             # Check for missing features

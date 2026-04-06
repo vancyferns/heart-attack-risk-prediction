@@ -11,7 +11,6 @@ werkzeug
 flask-bcrypt
 torch
 torchvision
-xgboost
 pillow
 numpy
 opencv-python-headless

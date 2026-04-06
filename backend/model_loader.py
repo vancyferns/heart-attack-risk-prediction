@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torchvision import models
-import xgboost as xgb
 import numpy as np
 import cv2
 from PIL import Image
@@ -15,12 +14,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
 UNET_PATH = os.path.join(MODELS_DIR, 'unet', 'unet_pseudo_best.pth')
 EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet', 'efficientnet_b3_best_fusion.pth')
-XGBOOST_PATH = os.path.join(MODELS_DIR, 'xgb_model.json')
 
 # Global model instances
 unet_model = None
 efficientnet_model = None
-xgboost_model = None
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -225,7 +222,7 @@ def create_efficientnet_model(num_classes=1):
 # ===========================
 def load_models():
     """Load all three models into memory"""
-    global unet_model, efficientnet_model, xgboost_model
+    global unet_model, efficientnet_model
     
     print("🔄 Loading ML models...")
     
@@ -266,17 +263,6 @@ def load_models():
             print(f"⚠️  EfficientNet model not found at {EFFICIENTNET_PATH}")
     except Exception as e:
         print(f"❌ Failed to load EfficientNet: {e}")
-    
-    # Load XGBoost
-    try:
-        if os.path.exists(XGBOOST_PATH):
-            xgboost_model = xgb.Booster()
-            xgboost_model.load_model(XGBOOST_PATH)
-            print(f"✅ XGBoost model loaded from {XGBOOST_PATH}")
-        else:
-            print(f"⚠️  XGBoost model not found at {XGBOOST_PATH}")
-    except Exception as e:
-        print(f"❌ Failed to load XGBoost: {e}")
     
     print("🎉 Model loading complete!")
 
@@ -403,7 +389,7 @@ def segment_image_with_unet(image_bytes):
 
 def predict_from_tabular(features):
     """
-    Predict heart disease risk from tabular data using XGBoost
+    Predict heart disease risk from tabular data using a built-in clinical score.
     
     Args:
         features: dict with keys: age, sex, cp, trestbps, chol, fbs, thalach, exang, oldpeak
@@ -411,9 +397,6 @@ def predict_from_tabular(features):
     Returns:
         dict: Prediction results with risk_score and risk_level
     """
-    if xgboost_model is None:
-        raise ValueError("XGBoost model not loaded")
-    
     try:
         # Expected feature order (adjust based on your training)
         feature_names = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']
@@ -426,14 +409,67 @@ def predict_from_tabular(features):
                 raise ValueError(f"Missing required feature: {fname}")
             feature_values.append(float(value))
         
-        # Create DMatrix for XGBoost
-        dmatrix = xgb.DMatrix(np.array([feature_values]), feature_names=feature_names)
-        
-        # Make prediction
-        prediction = xgboost_model.predict(dmatrix)[0]
-        
-        # Convert to risk score (0-100)
-        risk_score = float(prediction * 100)
+        feature_map = dict(zip(feature_names, feature_values))
+
+        # Heuristic scoring based on common cardiovascular risk tendencies.
+        score = 0.0
+
+        age = feature_map['age']
+        if age >= 65:
+            score += 28
+        elif age >= 55:
+            score += 21
+        elif age >= 45:
+            score += 14
+        elif age >= 35:
+            score += 7
+
+        sex = feature_map['sex']
+        if sex == 1:
+            score += 5
+
+        cp = feature_map['cp']
+        score += min(max(cp, 0), 3) * 4
+
+        trestbps = feature_map['trestbps']
+        if trestbps >= 160:
+            score += 12
+        elif trestbps >= 140:
+            score += 8
+        elif trestbps >= 130:
+            score += 4
+
+        chol = feature_map['chol']
+        if chol >= 300:
+            score += 12
+        elif chol >= 240:
+            score += 8
+        elif chol >= 200:
+            score += 4
+
+        if feature_map['fbs'] == 1:
+            score += 6
+
+        thalach = feature_map['thalach']
+        if thalach < 100:
+            score += 14
+        elif thalach < 130:
+            score += 8
+        elif thalach < 150:
+            score += 4
+
+        if feature_map['exang'] == 1:
+            score += 10
+
+        oldpeak = feature_map['oldpeak']
+        if oldpeak >= 4:
+            score += 13
+        elif oldpeak >= 2:
+            score += 9
+        elif oldpeak >= 1:
+            score += 5
+
+        risk_score = float(min(max(score, 0.0), 100.0))
         
         # --- PIECEWISE CONFIDENCE MATH ---
         if risk_score >= 40:
