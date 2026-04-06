@@ -67,7 +67,12 @@ const LandingPage = ({ onSignIn, onSignUp }) => {
         <div className="hero-visual">
           <div className="hero-graphic">
             <div className="graphic-element element-1">👁️</div>
-            <div className="graphic-element element-2">🫀</div>
+            <img
+              className="graphic-element element-2 heart-graphic"
+              src="https://res.cloudinary.com/dkiu8wrxc/image/upload/v1775491435/cardiac-muscles-tissue-specific-function-250nw-2514310263-removebg-preview_osieai.png"
+              alt=""
+              aria-hidden="true"
+            />
             <div className="graphic-element element-3">📊</div>
           </div>
         </div>
