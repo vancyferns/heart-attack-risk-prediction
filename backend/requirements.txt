@@ -14,7 +14,7 @@ torchvision
 xgboost
 pillow
 numpy
-opencv-python
+opencv-python-headless
 scikit-learn
 cloudinary
 requests
