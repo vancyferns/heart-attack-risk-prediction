@@ -7,7 +7,18 @@ from mongoengine import (
     CASCADE
 )
 from datetime import datetime
+import hashlib
 from werkzeug.security import generate_password_hash, check_password_hash
+
+
+def _is_sha256_hex(value: str) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(ch in '0123456789abcdefABCDEF' for ch in value)
+
+
+def _sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode('utf-8')).hexdigest()
 
 # --- User Model ---
 class User(Document):
@@ -17,12 +28,20 @@ class User(Document):
     password = StringField(required=True)
 
     def set_password(self, password: str):
-        # Hashes the password securely
-        self.password = generate_password_hash(password)
+        # Normalize to SHA-256 first, then store as salted hash.
+        normalized = password if _is_sha256_hex(password) else _sha256_hex(password)
+        self.password = generate_password_hash(normalized)
 
     def check_password(self, password: str) -> bool:
-        # Checks the provided password against the stored hash
-        return check_password_hash(self.password, password)
+        # Primary path: frontend already sends SHA-256.
+        if check_password_hash(self.password, password):
+            return True
+
+        # Compatibility path for direct/plaintext clients.
+        if not _is_sha256_hex(password):
+            return check_password_hash(self.password, _sha256_hex(password))
+
+        return False
 
 # --- Health Record Model (Prediction Data) ---
 class HealthRecord(Document):

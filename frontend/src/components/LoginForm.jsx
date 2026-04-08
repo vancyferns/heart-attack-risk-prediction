@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
 import axios from 'axios';
+import { hashPasswordSHA256 } from '../utils/crypto';
 
 const API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || (
   window.location.hostname.includes('devtunnels.ms')
@@ -95,9 +96,10 @@ const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
     setIsLoading(true);
 
     try {
+      const hashedPassword = await hashPasswordSHA256(password);
       const response = await axios.post(`${API_BASE_URL}/login`, {
         email,
-        password,
+        password: hashedPassword,
       });
 
       const { token, user } = response.data;
@@ -147,9 +149,10 @@ const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
 
     setIsLoading(true);
     try {
+      const hashedNewPassword = await hashPasswordSHA256(newPassword);
       const response = await axios.post(`${API_BASE_URL}/reset-password`, {
         token: resetToken,
-        new_password: newPassword,
+        new_password: hashedNewPassword,
       });
 
       setInfo(response.data?.msg || 'Password updated successfully. Please log in.');
