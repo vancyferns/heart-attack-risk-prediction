@@ -15,7 +15,7 @@ from auth_middleware import jwt_required
 from models import User, HealthRecord
 
 # Import ML model loader
-from model_loader import initialize_models, predict_from_image, predict_from_tabular, predict_combined
+from model_loader import initialize_models, predict_from_image
 
 # Load the .env file from the backend folder explicitly to ensure local dev values are picked up
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
@@ -405,137 +405,6 @@ def create_app():
         
         except Exception as e:
             print(f"❌ Image prediction error: {str(e)}")
-            return jsonify({'msg': f'Prediction failed: {str(e)}'}), 500
-
-    @app.route('/api/predict/tabular', methods=['POST'])
-    @jwt_required
-    def predict_tabular(current_user):
-        """
-        Predict heart disease risk from patient health data
-        Expects JSON with: age, sex, cp, trestbps, chol, fbs, thalach, exang, oldpeak
-        """
-        try:
-            data = request.get_json() or {}
-            patient_name = (data.get('patient_name') or '').strip() or None
-            
-            # Required features for XGBoost model
-            required_features = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']
-            
-            # Check for missing features
-            missing = [f for f in required_features if f not in data or data[f] is None]
-            if missing:
-                return jsonify({'msg': f'Missing required features: {", ".join(missing)}'}), 400
-            
-            # Prepare features dict
-            features = {f: float(data[f]) for f in required_features}
-            
-            # Make prediction
-            prediction = predict_from_tabular(features)
-            
-            # Save to database
-            record = HealthRecord(
-                user=current_user,
-                patient_name=patient_name,
-                risk_score=prediction['risk_score'],
-                prediction_result=prediction['risk_level'],
-                age=features['age'],
-                sex=features['sex'],
-                cp=features['cp'],
-                trestbps=features['trestbps'],
-                chol=features['chol'],
-                fbs=features['fbs'],
-                thalach=features['thalach'],
-                exang=features['exang'],
-                oldpeak=features['oldpeak']
-            )
-            record.save()
-            
-            return jsonify({
-                'success': True,
-                'prediction': prediction,
-                'record_id': str(record.id)
-            }), 200
-        
-        except ValueError as ve:
-            return jsonify({'msg': str(ve)}), 400
-        except Exception as e:
-            print(f"❌ Tabular prediction error: {str(e)}")
-            return jsonify({'msg': f'Prediction failed: {str(e)}'}), 500
-
-    @app.route('/api/predict/combined', methods=['POST'])
-    @jwt_required
-    def predict_combined_route(current_user):
-        """
-        Combined prediction using both image and tabular data
-        Expects: multipart/form-data with optional 'image' file and JSON fields
-        """
-        try:
-            # Get image if provided and save it
-            image_bytes = None
-            saved_filename = None
-            if 'image' in request.files:
-                image_file = request.files['image']
-                if image_file.filename != '':
-                    if not is_allowed_eye_image(image_file):
-                        return jsonify({'msg': 'Invalid file type. Upload retinal images in JPG or PNG format only.'}), 400
-
-                    # Save the uploaded image to disk
-                    original_filename = secure_filename(image_file.filename)
-                    timestamp = datetime.utcnow().timestamp()
-                    saved_filename = f"{current_user.id}_{timestamp}_{original_filename}"
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
-                    
-                    # Save file to uploads folder
-                    image_file.save(filepath)
-                    
-                    # Read image bytes for prediction
-                    with open(filepath, 'rb') as f:
-                        image_bytes = f.read()
-            
-            # Get tabular data from form or JSON
-            if request.form:
-                data = request.form.to_dict()
-            else:
-                data = request.get_json() or {}
-
-            patient_name = (data.get('patient_name') or '').strip() or None
-            
-            # Prepare features if all are present
-            features = None
-            feature_names = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']
-            if all(f in data and data[f] for f in feature_names):
-                features = {f: float(data[f]) for f in feature_names}
-            
-            # Make combined prediction
-            prediction = predict_combined(image_bytes, features)
-            
-            # Save to database
-            record = HealthRecord(
-                user=current_user,
-                patient_name=patient_name,
-                risk_score=prediction['combined_risk_score'],
-                prediction_result=prediction['final_risk_level'],
-                age=features['age'] if features else None,
-                sex=features['sex'] if features else None,
-                cp=features['cp'] if features else None,
-                trestbps=features['trestbps'] if features else None,
-                chol=features['chol'] if features else None,
-                fbs=features['fbs'] if features else None,
-                thalach=features['thalach'] if features else None,
-                exang=features['exang'] if features else None,
-                oldpeak=features['oldpeak'] if features else None,
-                image_url=saved_filename  # Store actual filename
-            )
-            record.save()
-            
-            return jsonify({
-                'success': True,
-                'prediction': prediction,
-                'record_id': str(record.id)
-            }), 200
-        
-        except Exception as e:
-            print(f"❌ Combined prediction error: {str(e)}")
             return jsonify({'msg': f'Prediction failed: {str(e)}'}), 500
 
     # Generic exception handler that returns JSON so the frontend gets a meaningful

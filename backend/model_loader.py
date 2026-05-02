@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torchvision import models
-import xgboost as xgb
+import segmentation_models_pytorch as smp
 import numpy as np
 import cv2
 from PIL import Image
@@ -13,14 +13,12 @@ import io
 # Define model paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
-UNET_PATH = os.path.join(MODELS_DIR, 'unet', 'unet_pseudo_best.pth')
-EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet', 'efficientnet_b3_best_fusion.pth')
-XGBOOST_PATH = os.path.join(MODELS_DIR, 'xgb_model.json')
+UNET_PATH = os.path.join(MODELS_DIR, 'unet', 'unet_best_advanced.pth')
+EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet', 'efficientnet_b3_best.pth')
 
 # Global model instances
 unet_model = None
 efficientnet_model = None
-xgboost_model = None
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -206,26 +204,62 @@ def _looks_like_legacy_unet(state_dict):
     return any(k.startswith('inc.') for k in keys) and any(k.startswith('up1.') for k in keys)
 
 
+def _looks_like_smp_unet(state_dict):
+    """Detect segmentation_models_pytorch-style UNet checkpoints."""
+    if not isinstance(state_dict, dict):
+        return False
+    keys = list(state_dict.keys())
+    return any(k.startswith('encoder._conv_stem') for k in keys) and any(k.startswith('decoder.blocks.') for k in keys)
+
+
 # ===========================
 # EfficientNet Model Setup
 # ===========================
-def create_efficientnet_model(num_classes=1):
+def create_efficientnet_model(num_classes=1, nested_classifier=False):
     """Create EfficientNet-B3 model for classification (binary output)"""
     model = models.efficientnet_b3(weights=None)
     num_features = model.classifier[1].in_features
-    model.classifier = nn.Sequential(
-        nn.Dropout(p=0.3, inplace=True),
-        nn.Linear(num_features, num_classes)
-    )
+    if nested_classifier:
+        # Matches checkpoint keys like classifier.1.1.weight
+        model.classifier = nn.Sequential(
+            nn.Dropout(p=0.3, inplace=True),
+            nn.Sequential(
+                nn.Dropout(p=0.3, inplace=True),
+                nn.Linear(num_features, num_classes)
+            )
+        )
+    else:
+        model.classifier = nn.Sequential(
+            nn.Dropout(p=0.3, inplace=True),
+            nn.Linear(num_features, num_classes)
+        )
     return model
+
+
+class SMPUNet(smp.Unet):
+    """SMP UNet variant that returns probability maps for inference."""
+    def forward(self, x):
+        logits = super().forward(x)
+        return torch.sigmoid(logits)
+
+
+def create_smp_unet_model():
+    """Create SMP UNet matching the new advanced UNet checkpoint."""
+    return SMPUNet(
+        encoder_name='efficientnet-b0',
+        encoder_weights=None,
+        in_channels=3,
+        classes=1,
+        activation=None
+    )
 
 
 # ===========================
 # Model Loading Functions
 # ===========================
 def load_models():
-    """Load all three models into memory"""
-    global unet_model, efficientnet_model, xgboost_model
+    """Load UNet and EfficientNet models into memory."""
+    global unet_model, efficientnet_model
     
     print("🔄 Loading ML models...")
     
@@ -234,15 +268,19 @@ def load_models():
         if os.path.exists(UNET_PATH):
             checkpoint = torch.load(UNET_PATH, map_location=device)
             unet_state = _extract_state_dict(checkpoint)
+            loaded_unet_model = None
 
-            if _looks_like_legacy_unet(unet_state):
-                unet_model = UNetLegacy(n_channels=3, n_classes=1)
+            if _looks_like_smp_unet(unet_state):
+                loaded_unet_model = create_smp_unet_model()
+            elif _looks_like_legacy_unet(unet_state):
+                loaded_unet_model = UNetLegacy(n_channels=3, n_classes=1)
             else:
-                unet_model = UNet(in_channels=3, out_channels=1)
+                loaded_unet_model = UNet(in_channels=3, out_channels=1)
 
-            unet_model.load_state_dict(unet_state)
-            unet_model.to(device)
-            unet_model.eval()
+            loaded_unet_model.load_state_dict(unet_state)
+            loaded_unet_model.to(device)
+            loaded_unet_model.eval()
+            unet_model = loaded_unet_model
             print(f"✅ UNet model loaded from {UNET_PATH}")
         else:
             print(f"⚠️  UNet model not found at {UNET_PATH}")
@@ -252,31 +290,23 @@ def load_models():
     # Load EfficientNet
     try:
         if os.path.exists(EFFICIENTNET_PATH):
-            efficientnet_model = create_efficientnet_model(num_classes=1)
             checkpoint = torch.load(EFFICIENTNET_PATH, map_location=device)
+            eff_state = _extract_state_dict(checkpoint)
+            nested_classifier = isinstance(eff_state, dict) and 'classifier.1.1.weight' in eff_state
+            loaded_efficientnet_model = create_efficientnet_model(num_classes=1, nested_classifier=nested_classifier)
             # Handle different checkpoint formats
-            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-                efficientnet_model.load_state_dict(checkpoint['model_state_dict'])
-            else:
-                efficientnet_model.load_state_dict(checkpoint)
-            efficientnet_model.to(device)
-            efficientnet_model.eval()
+            loaded_efficientnet_model.load_state_dict(eff_state)
+            loaded_efficientnet_model.to(device)
+            loaded_efficientnet_model.eval()
+            efficientnet_model = loaded_efficientnet_model
             print(f"✅ EfficientNet model loaded from {EFFICIENTNET_PATH}")
         else:
             print(f"⚠️  EfficientNet model not found at {EFFICIENTNET_PATH}")
     except Exception as e:
         print(f"❌ Failed to load EfficientNet: {e}")
-    
-    # Load XGBoost
-    try:
-        if os.path.exists(XGBOOST_PATH):
-            xgboost_model = xgb.Booster()
-            xgboost_model.load_model(XGBOOST_PATH)
-            print(f"✅ XGBoost model loaded from {XGBOOST_PATH}")
-        else:
-            print(f"⚠️  XGBoost model not found at {XGBOOST_PATH}")
-    except Exception as e:
-        print(f"❌ Failed to load XGBoost: {e}")
+
+    if unet_model is None or efficientnet_model is None:
+        raise RuntimeError("Required models failed to load (UNet and/or EfficientNet).")
     
     print("🎉 Model loading complete!")
 
@@ -399,128 +429,6 @@ def segment_image_with_unet(image_bytes):
     
     except Exception as e:
         raise Exception(f"Image segmentation failed: {str(e)}")
-
-
-def predict_from_tabular(features):
-    """
-    Predict heart disease risk from tabular data using XGBoost
-    
-    Args:
-        features: dict with keys: age, sex, cp, trestbps, chol, fbs, thalach, exang, oldpeak
-        
-    Returns:
-        dict: Prediction results with risk_score and risk_level
-    """
-    if xgboost_model is None:
-        raise ValueError("XGBoost model not loaded")
-    
-    try:
-        # Expected feature order (adjust based on your training)
-        feature_names = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']
-        
-        # Extract features in correct order
-        feature_values = []
-        for fname in feature_names:
-            value = features.get(fname)
-            if value is None:
-                raise ValueError(f"Missing required feature: {fname}")
-            feature_values.append(float(value))
-        
-        # Create DMatrix for XGBoost
-        dmatrix = xgb.DMatrix(np.array([feature_values]), feature_names=feature_names)
-        
-        # Make prediction
-        prediction = xgboost_model.predict(dmatrix)[0]
-        
-        # Convert to risk score (0-100)
-        risk_score = float(prediction * 100)
-        
-        # --- PIECEWISE CONFIDENCE MATH ---
-        if risk_score >= 40:
-            confidence = ((risk_score - 40.0) / 60.0) * 100
-        else:
-            confidence = ((40.0 - risk_score) / 40.0) * 100
-        
-        # Determine risk level
-        if risk_score >= 70:
-            risk_level = "High"
-        elif risk_score >= 40:
-            risk_level = "Medium"
-        else:
-            risk_level = "Low"
-        
-        return {
-            'risk_score': round(risk_score, 2),
-            'risk_level': risk_level,
-            'confidence': round(confidence, 2),
-            'features_used': feature_names,
-            'prediction': int(risk_score >= 40)
-        }
-    
-    except ValueError as ve:
-        raise ve
-    except Exception as e:
-        raise Exception(f"Tabular prediction failed: {str(e)}")
-
-
-def predict_combined(image_bytes, features=None):
-    """
-    Combined prediction using both image and tabular data
-    
-    Args:
-        image_bytes: Raw image bytes
-        features: Optional dict with tabular features
-        
-    Returns:
-        dict: Combined prediction results
-    """
-    results = {}
-    
-    # Image-based prediction
-    if image_bytes:
-        image_pred = predict_from_image(image_bytes)
-        results['image_prediction'] = image_pred
-        results['image_risk_score'] = image_pred['risk_score']
-    
-    # Tabular-based prediction
-    if features and all(features.get(f) is not None for f in ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang', 'oldpeak']):
-        tabular_pred = predict_from_tabular(features)
-        results['tabular_prediction'] = tabular_pred
-        results['tabular_risk_score'] = tabular_pred['risk_score']
-    
-    # Combined risk score (weighted average if both available)
-    if 'image_risk_score' in results and 'tabular_risk_score' in results:
-        # 60% weight to image, 40% to tabular (adjust as needed)
-        combined_score = (results['image_risk_score'] * 0.6 + results['tabular_risk_score'] * 0.4)
-        results['combined_risk_score'] = round(combined_score, 2)
-        
-        # --- PIECEWISE CONFIDENCE MATH ---
-        if combined_score >= 40:
-            combined_confidence = ((combined_score - 40.0) / 60.0) * 100
-        else:
-            combined_confidence = ((40.0 - combined_score) / 40.0) * 100
-            
-        results['combined_confidence'] = round(combined_confidence, 2)
-        
-        if combined_score >= 70:
-            results['final_risk_level'] = "High"
-        elif combined_score >= 40:
-            results['final_risk_level'] = "Medium"
-        else:
-            results['final_risk_level'] = "Low"
-            
-    elif 'image_risk_score' in results:
-        results['combined_risk_score'] = results['image_risk_score']
-        results['combined_confidence'] = results['image_prediction']['confidence']
-        results['final_risk_level'] = results['image_prediction']['risk_level']
-    elif 'tabular_risk_score' in results:
-        results['combined_risk_score'] = results['tabular_risk_score']
-        results['combined_confidence'] = results['tabular_prediction']['confidence']
-        results['final_risk_level'] = results['tabular_prediction']['risk_level']
-    else:
-        raise ValueError("No valid prediction inputs provided")
-    
-    return results
 
 
 # ===========================

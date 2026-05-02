@@ -11,7 +11,7 @@ werkzeug
 flask-bcrypt
 torch
 torchvision
-xgboost
+segmentation-models-pytorch
 pillow
 numpy
 opencv-python
