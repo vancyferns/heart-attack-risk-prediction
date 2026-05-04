@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import '../assets/HealthDataForm.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (
-  window.location.hostname.includes('devtunnels.ms')
-    ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api'
-    : 'http://127.0.0.1:5000/api'
-);
 
 const HealthDataForm = ({ onSubmit, patientData }) => {
   const [formData, setFormData] = useState({
@@ -75,73 +68,9 @@ const HealthDataForm = ({ onSubmit, patientData }) => {
     setIsSubmitting(true);
     setError('');
 
-    const token = localStorage.getItem('token');
-
-    // Prepare features for prediction
-    const features = {
-      age: parseFloat(formData.age),
-      sex: parseInt(formData.sex),
-      cp: parseInt(formData.cp),
-      trestbps: parseFloat(formData.trestbps),
-      chol: parseFloat(formData.chol),
-      fbs: parseInt(formData.fbs),
-      thalach: parseFloat(formData.thalach),
-      exang: parseInt(formData.exang),
-      oldpeak: parseFloat(formData.oldpeak)
-    };
-
-    try {
-      const response = await axios.post(`${API_BASE}/predict/tabular`, features, {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const prediction = response.data.prediction;
-
-      // Generate recommendations based on risk level
-      let recommendations = [];
-      if (prediction.risk_level === 'High') {
-        recommendations = [
-          'Immediate medical consultation strongly recommended',
-          'Comprehensive cardiac assessment required',
-          'Lifestyle modifications necessary',
-          'Consider medication management with your doctor'
-        ];
-      } else if (prediction.risk_level === 'Medium') {
-        recommendations = [
-          'Schedule routine cardiac check-up',
-          'Monitor blood pressure and cholesterol regularly',
-          'Maintain regular exercise routine',
-          'Follow heart-healthy diet'
-        ];
-      } else {
-        recommendations = [
-          'Continue healthy lifestyle habits',
-          'Annual health screenings recommended',
-          'Maintain physical activity',
-          'Keep monitoring vital signs'
-        ];
-      }
-
-      // Map to results format
-      const results = {
-        riskLevel: prediction.risk_level,
-        riskScore: prediction.risk_score,
-        confidence: 95, // Tabular models typically have high confidence
-        message: `Health data analysis indicates ${prediction.risk_level.toLowerCase()} risk for heart disease`,
-        recommendations,
-        _recordId: response.data.record_id
-      };
-
-      onSubmit(results);
-    } catch (err) {
-      console.error('Prediction failed:', err?.response?.data || err.message);
-      setError(err?.response?.data?.msg || 'Prediction failed. Please check your inputs and try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Tabular prediction was removed from backend. Keep the form for data entry only.
+    setError('Health-data-only prediction is disabled. Use Eye Scan Upload for active predictions.');
+    setIsSubmitting(false);
   };
 
   return (

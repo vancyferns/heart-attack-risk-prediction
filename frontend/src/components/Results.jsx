@@ -349,7 +349,6 @@ const Results = ({ results, patientData, onReset }) => {
           <div className="card-icon">✓</div>
           <h3>Confidence Level</h3>
           <p className="confidence-value">{results?.confidence}%</p>
-          <p className="confidence-label">AI Model Confidence</p>
         </div>
       </div>
 
