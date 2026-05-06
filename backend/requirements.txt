@@ -12,6 +12,7 @@ flask-bcrypt
 gunicorn
 torch
 torchvision
+segmentation-models-pytorch
 pillow
 numpy
 opencv-python-headless

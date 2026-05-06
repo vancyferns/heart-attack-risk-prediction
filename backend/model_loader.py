@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torchvision import models
+import segmentation_models_pytorch as smp
 import numpy as np
 import cv2
 from PIL import Image
@@ -12,8 +13,8 @@ import io
 # Define model paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
-UNET_PATH = os.path.join(MODELS_DIR, 'unet', 'unet_pseudo_best.pth')
-EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet', 'efficientnet_b3_best_fusion.pth')
+UNET_PATH = os.path.join(MODELS_DIR, 'unet', 'unet_best_advanced.pth')
+EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet', 'efficientnet_b3_best.pth')
 
 # Global model instances
 unet_model = None
@@ -203,25 +204,61 @@ def _looks_like_legacy_unet(state_dict):
     return any(k.startswith('inc.') for k in keys) and any(k.startswith('up1.') for k in keys)
 
 
+def _looks_like_smp_unet(state_dict):
+    """Detect segmentation_models_pytorch-style UNet checkpoints."""
+    if not isinstance(state_dict, dict):
+        return False
+    keys = list(state_dict.keys())
+    return any(k.startswith('encoder._conv_stem') for k in keys) and any(k.startswith('decoder.blocks.') for k in keys)
+
+
 # ===========================
 # EfficientNet Model Setup
 # ===========================
-def create_efficientnet_model(num_classes=1):
+def create_efficientnet_model(num_classes=1, nested_classifier=False):
     """Create EfficientNet-B3 model for classification (binary output)"""
     model = models.efficientnet_b3(weights=None)
     num_features = model.classifier[1].in_features
-    model.classifier = nn.Sequential(
-        nn.Dropout(p=0.3, inplace=True),
-        nn.Linear(num_features, num_classes)
-    )
+    if nested_classifier:
+        # Matches checkpoint keys like classifier.1.1.weight
+        model.classifier = nn.Sequential(
+            nn.Dropout(p=0.3, inplace=True),
+            nn.Sequential(
+                nn.Dropout(p=0.3, inplace=True),
+                nn.Linear(num_features, num_classes)
+            )
+        )
+    else:
+        model.classifier = nn.Sequential(
+            nn.Dropout(p=0.3, inplace=True),
+            nn.Linear(num_features, num_classes)
+        )
     return model
+
+
+class SMPUNet(smp.Unet):
+    """SMP UNet variant that returns probability maps for inference."""
+    def forward(self, x):
+        logits = super().forward(x)
+        return torch.sigmoid(logits)
+
+
+def create_smp_unet_model():
+    """Create SMP UNet matching the new advanced UNet checkpoint."""
+    return SMPUNet(
+        encoder_name='efficientnet-b0',
+        encoder_weights=None,
+        in_channels=3,
+        classes=1,
+        activation=None
+    )
 
 
 # ===========================
 # Model Loading Functions
 # ===========================
 def load_models():
-    """Load all three models into memory"""
+    """Load UNet and EfficientNet models into memory."""
     global unet_model, efficientnet_model
     
     print("🔄 Loading ML models...")
@@ -231,15 +268,19 @@ def load_models():
         if os.path.exists(UNET_PATH):
             checkpoint = torch.load(UNET_PATH, map_location=device)
             unet_state = _extract_state_dict(checkpoint)
+            loaded_unet_model = None
 
-            if _looks_like_legacy_unet(unet_state):
-                unet_model = UNetLegacy(n_channels=3, n_classes=1)
+            if _looks_like_smp_unet(unet_state):
+                loaded_unet_model = create_smp_unet_model()
+            elif _looks_like_legacy_unet(unet_state):
+                loaded_unet_model = UNetLegacy(n_channels=3, n_classes=1)
             else:
-                unet_model = UNet(in_channels=3, out_channels=1)
+                loaded_unet_model = UNet(in_channels=3, out_channels=1)
 
-            unet_model.load_state_dict(unet_state)
-            unet_model.to(device)
-            unet_model.eval()
+            loaded_unet_model.load_state_dict(unet_state)
+            loaded_unet_model.to(device)
+            loaded_unet_model.eval()
+            unet_model = loaded_unet_model
             print(f"✅ UNet model loaded from {UNET_PATH}")
         else:
             print(f"⚠️  UNet model not found at {UNET_PATH}")
@@ -249,20 +290,23 @@ def load_models():
     # Load EfficientNet
     try:
         if os.path.exists(EFFICIENTNET_PATH):
-            efficientnet_model = create_efficientnet_model(num_classes=1)
             checkpoint = torch.load(EFFICIENTNET_PATH, map_location=device)
+            eff_state = _extract_state_dict(checkpoint)
+            nested_classifier = isinstance(eff_state, dict) and 'classifier.1.1.weight' in eff_state
+            loaded_efficientnet_model = create_efficientnet_model(num_classes=1, nested_classifier=nested_classifier)
             # Handle different checkpoint formats
-            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-                efficientnet_model.load_state_dict(checkpoint['model_state_dict'])
-            else:
-                efficientnet_model.load_state_dict(checkpoint)
-            efficientnet_model.to(device)
-            efficientnet_model.eval()
+            loaded_efficientnet_model.load_state_dict(eff_state)
+            loaded_efficientnet_model.to(device)
+            loaded_efficientnet_model.eval()
+            efficientnet_model = loaded_efficientnet_model
             print(f"✅ EfficientNet model loaded from {EFFICIENTNET_PATH}")
         else:
             print(f"⚠️  EfficientNet model not found at {EFFICIENTNET_PATH}")
     except Exception as e:
         print(f"❌ Failed to load EfficientNet: {e}")
+
+    if unet_model is None or efficientnet_model is None:
+        raise RuntimeError("Required models failed to load (UNet and/or EfficientNet).")
     
     print("🎉 Model loading complete!")
 

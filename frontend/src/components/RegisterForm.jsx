@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AnimatedBackground from './AnimatedBackground';
 import '../assets/Forms.css';
 import axios from 'axios';
+import { hashPasswordSHA256 } from '../utils/crypto';
 
 const API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || (
   window.location.hostname.includes('devtunnels.ms')
@@ -54,10 +55,11 @@ const RegisterForm = ({ onSwitchToLogin }) => {
     }
 
     try {
+      const hashedPassword = await hashPasswordSHA256(password);
       const response = await axios.post(`${API_BASE_URL}/register`, {
         name,
         email,
-        password,
+        password: hashedPassword,
       });
 
       localStorage.setItem('token', response.data.token);
