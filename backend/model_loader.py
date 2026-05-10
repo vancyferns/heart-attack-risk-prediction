@@ -9,12 +9,15 @@ import numpy as np
 import cv2
 from PIL import Image
 import io
+from huggingface_hub import hf_hub_download
 
 # Define model paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
 UNET_PATH = os.path.join(MODELS_DIR, 'unet', 'unet_best_advanced.pth')
 EFFICIENTNET_PATH = os.path.join(MODELS_DIR, 'efficientnet', 'efficientnet_b3_best.pth')
+SPACE_REPO_ID = os.getenv('HF_SPACE_REPO_ID', 'TARAMALIK16/unet-efficient-net-backend')
+SPACE_REPO_REVISION = os.getenv('HF_SPACE_REPO_REVISION', 'main')
 
 # Global model instances
 unet_model = None
@@ -196,6 +199,37 @@ def _extract_state_dict(checkpoint):
     return checkpoint
 
 
+def _load_checkpoint(path):
+    """Load trusted local checkpoints in a PyTorch-version-safe way."""
+    try:
+        return torch.load(path, map_location=device, weights_only=False)
+    except TypeError:
+        return torch.load(path, map_location=device)
+
+
+def _is_git_lfs_pointer(path):
+    """Detect Git LFS pointer files masquerading as checkpoints."""
+    try:
+        with open(path, 'rb') as file_handle:
+            return file_handle.read(64).startswith(b'version https://git-lfs.github.com/spec/v1')
+    except OSError:
+        return False
+
+
+def _resolve_checkpoint_path(local_path, repo_filename):
+    """Return a real checkpoint path, downloading from the Space repo if needed."""
+    if os.path.exists(local_path) and not _is_git_lfs_pointer(local_path):
+        return local_path
+
+    downloaded_path = hf_hub_download(
+        repo_id=SPACE_REPO_ID,
+        repo_type='space',
+        revision=SPACE_REPO_REVISION,
+        filename=repo_filename,
+    )
+    return downloaded_path
+
+
 def _looks_like_legacy_unet(state_dict):
     """Detect legacy UNet checkpoints by key namespace."""
     if not isinstance(state_dict, dict):
@@ -266,7 +300,8 @@ def load_models():
     # Load UNet
     try:
         if os.path.exists(UNET_PATH):
-            checkpoint = torch.load(UNET_PATH, map_location=device)
+            checkpoint_path = _resolve_checkpoint_path(UNET_PATH, 'models/unet/unet_best_advanced.pth')
+            checkpoint = _load_checkpoint(checkpoint_path)
             unet_state = _extract_state_dict(checkpoint)
             loaded_unet_model = None
 
@@ -290,7 +325,8 @@ def load_models():
     # Load EfficientNet
     try:
         if os.path.exists(EFFICIENTNET_PATH):
-            checkpoint = torch.load(EFFICIENTNET_PATH, map_location=device)
+            checkpoint_path = _resolve_checkpoint_path(EFFICIENTNET_PATH, 'models/efficientnet/efficientnet_b3_best.pth')
+            checkpoint = _load_checkpoint(checkpoint_path)
             eff_state = _extract_state_dict(checkpoint)
             nested_classifier = isinstance(eff_state, dict) and 'classifier.1.1.weight' in eff_state
             loaded_efficientnet_model = create_efficientnet_model(num_classes=1, nested_classifier=nested_classifier)
