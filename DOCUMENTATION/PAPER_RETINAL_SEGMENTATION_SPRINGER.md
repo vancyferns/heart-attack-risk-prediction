@@ -1,6 +1,6 @@
-% Retinal Vessel Segmentation under Annotation Scarcity
+# Retinal Vessel Segmentation under Annotation Scarcity
 
-V. Fernandes1, D. Pinto2, K. Kallekar3, V. Shetkar4, Prof. A. Rodrigues5
+Vancy Fernandes 1, Daniel Pinto 2, Kajal Kallekar 3, Vedangi Shetkar 4, Prof. Anthony. Rodrigues 5
 
 1–5 Department of Information Technology, Shree Rayeshwar Institute of Engineering and Information Technology, Shiroda‑Goa, India
 Emails: vanferns2004@gmail.com, daniel031722@gmail.com, kajalkallekar@gmail.com, vedangishetkar@gmail.com, anthony.rodrigues@ritgoa.ac.in
