@@ -18,3 +18,5 @@ opencv-python
 scikit-learn
 cloudinary
 requests
+gunicorn
+huggingface_hub
