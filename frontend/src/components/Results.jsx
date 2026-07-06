@@ -142,9 +142,6 @@ const Results = ({ results, patientData, onReset }) => {
     const now = new Date();
     const reportDate = now.toLocaleDateString();
     const reportTime = now.toLocaleTimeString();
-    const safeRecommendations = results?.recommendations?.length
-      ? results.recommendations
-      : ['Continue routine follow-up with a qualified clinician.', 'Repeat screening if symptoms change or if new risk factors emerge.'];
     const analysisSummary = buildAnalysisSummary(results?.riskLevel);
 
     doc.setProperties({
@@ -293,9 +290,6 @@ const Results = ({ results, patientData, onReset }) => {
     drawMetricCard(margin + cardWidth + 4, cursorY, cardWidth, 'Risk Score', `${results?.riskScore ?? 'N/A'}%`, neutralAccent);
     drawMetricCard(margin + (cardWidth + 4) * 2, cursorY, cardWidth, 'Confidence', `${results?.confidence ?? 'N/A'}%`, [179, 58, 58]);
     cursorY += 30;
-
-    cursorY = drawSectionTitle('3. Recommendations', cursorY);
-    cursorY = drawBulletList(safeRecommendations, cursorY);
 
     return doc;
   };
