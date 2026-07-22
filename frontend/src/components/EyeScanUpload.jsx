@@ -9,6 +9,28 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || (
     : 'http://127.0.0.1:5000/api'
 );
 
+const SCAN_HISTORY_CACHE_PREFIX = 'scanHistoryCache';
+
+const getScanHistoryCacheKey = (token) => `${SCAN_HISTORY_CACHE_PREFIX}:${token || 'guest'}`;
+
+const saveScanToHistoryCache = (token, record) => {
+  try {
+    const cacheKey = getScanHistoryCacheKey(token);
+    const currentRecords = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+    const nextRecords = [record, ...currentRecords].filter((item, index, array) => {
+      const itemKey = item.id || item.record_id || `${item.patient_name || item.name || 'unknown'}-${item.date_submitted || item.createdAt || ''}-${item.prediction_result || item.riskLevel || ''}`;
+      return array.findIndex((candidate) => {
+        const candidateKey = candidate.id || candidate.record_id || `${candidate.patient_name || candidate.name || 'unknown'}-${candidate.date_submitted || candidate.createdAt || ''}-${candidate.prediction_result || candidate.riskLevel || ''}`;
+        return candidateKey === itemKey;
+      }) === index;
+    });
+
+    localStorage.setItem(cacheKey, JSON.stringify(nextRecords));
+  } catch (error) {
+    console.warn('Unable to save scan history cache:', error);
+  }
+};
+
 const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -185,6 +207,16 @@ const EyeScanUpload = ({ onSubmit, patientData, onBack }) => {
     })
     .then(res => {
       const prediction = res.data.prediction;
+      const historyRecord = {
+        id: res.data.record_id,
+        patient_name: patientData?.name || '',
+        date_submitted: new Date().toISOString(),
+        risk_score: prediction.risk_score,
+        prediction_result: prediction.risk_level,
+        image_url: null
+      };
+
+      saveScanToHistoryCache(token, historyRecord);
       
       // Generate recommendations based on risk level
       let recommendations = [];

@@ -8,6 +8,36 @@ import Results from './Results';
 import Settings from './Settings';
 import '../assets/Dashboard.css';
 
+const SCAN_HISTORY_CACHE_PREFIX = 'scanHistoryCache';
+
+const getScanHistoryCacheKey = (token) => `${SCAN_HISTORY_CACHE_PREFIX}:${token || 'guest'}`;
+
+const readCachedScanHistory = (token) => {
+  try {
+    const stored = localStorage.getItem(getScanHistoryCacheKey(token));
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const mergeScanHistory = (records, cachedRecords) => {
+  const merged = new Map();
+
+  [...cachedRecords, ...records].forEach((record) => {
+    const recordKey = record.id || record.record_id || `${record.patient_name || record.name || 'unknown'}-${record.date_submitted || record.createdAt || ''}-${record.prediction_result || record.riskLevel || ''}`;
+    if (!merged.has(recordKey)) {
+      merged.set(recordKey, record);
+    }
+  });
+
+  return Array.from(merged.values()).sort((a, b) => {
+    const aDate = new Date(a.date_submitted || a.createdAt || 0).getTime();
+    const bDate = new Date(b.date_submitted || b.createdAt || 0).getTime();
+    return bDate - aDate;
+  });
+};
+
 const RECORDS_API_BASE = import.meta.env.VITE_API_BASE_URL || (
   window.location.hostname.includes('devtunnels.ms')
     ? 'https://cw0xw4lf-5000.inc1.devtunnels.ms/api'
@@ -333,7 +363,9 @@ const HistoryView = ({ onBack }) => {
         
         const data = await res.json();
         console.log('✅ Records fetched:', data.length);
-        setRecords(data);
+
+        const cachedRecords = readCachedScanHistory(token);
+        setRecords(mergeScanHistory(data, cachedRecords));
       } catch (err) {
         console.error('❌ Error fetching records:', err);
         if (err.message.includes('401')) {
@@ -367,7 +399,11 @@ const HistoryView = ({ onBack }) => {
               <div key={r.id} className="history-item">
                 <div className="history-meta">
                   <strong>{r.patient_name || r.name || r.patientName || 'Patient Name Not Available'}</strong>
-                  <span>{new Date(r.date_submitted).toLocaleDateString()}</span>
+                  <span>{new Date(r.date_submitted || r.createdAt || Date.now()).toLocaleDateString()}</span>
+                </div>
+                <div className="history-body">
+                  <span>Risk: {r.risk_score ?? r.riskScore ?? 'N/A'}</span>
+                  <span>Result: {r.prediction_result || r.riskLevel || 'N/A'}</span>
                 </div>
               </div>
             ))

@@ -152,7 +152,7 @@ const RegisterForm = ({ onSwitchToLogin }) => {
               </button>
             </div>
             
-            {password && (
+            {!password && (
               <div className="password-requirements">
                 <p className="requirements-title">Password Requirements:</p>
                 <ul>

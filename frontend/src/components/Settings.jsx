@@ -20,7 +20,6 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
 
   const [privacy, setPrivacy] = useState({
     profileVisibility: 'private',
-    dataSharing: false,
     analyticsTracking: true,
   });
 
@@ -55,12 +54,6 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
   };
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState('email');
-  const [twoFactorVerified, setTwoFactorVerified] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [verificationError, setVerificationError] = useState('');
-  const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -115,47 +108,6 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
     } else {
       setProfileErrors(errors);
     }
-  };
-
-  const handleTwoFactorToggle = (isEnabled) => {
-    if (isEnabled) {
-      // Always show verification modal when turning on 2FA
-      setVerificationSuccess(false);
-      setVerificationCode('');
-      setVerificationError('');
-      setShowTwoFactorModal(true);
-    } else {
-      handlePrivacyChange('dataSharing', isEnabled);
-    }
-  };
-
-  const handleSendVerificationCode = () => {
-    // Simulate sending verification code
-    setVerificationError('');
-    setVerificationSuccess(true);
-    // In production, this would call an API to send the code
-    alert(`Verification code sent to ${twoFactorMethod === 'email' ? profileData.email : profileData.phone}`);
-  };
-
-  const handleVerifyCode = () => {
-    // Simulate code verification (accept any 6-digit code)
-    if (verificationCode.length === 6) {
-      setTwoFactorVerified(true);
-      setVerificationSuccess(false);
-      setShowTwoFactorModal(false);
-      handlePrivacyChange('dataSharing', true);
-      setVerificationCode('');
-      alert('Two-Factor Authentication enabled successfully!');
-    } else {
-      setVerificationError('Please enter a valid 6-digit verification code');
-    }
-  };
-
-  const handlePrivacyChange = (key, value) => {
-    setPrivacy(prev => ({
-      ...prev,
-      [key]: value
-    }));
   };
 
   const handlePasswordChange = (e) => {
@@ -397,21 +349,6 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
                   </button>
                 </div>
 
-                <div className="security-item">
-                  <div className="security-info">
-                    <h4>Two-Factor Authentication</h4>
-                    <p>Add an extra layer of security to your account</p>
-                    {twoFactorVerified && <span className="verified-badge">✓ Verified</span>}
-                  </div>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={privacy.dataSharing}
-                      onChange={(e) => handleTwoFactorToggle(e.target.checked)}
-                    />
-                    <span className="slider"></span>
-                  </label>
-                </div>
               </div>
             </motion.div>
           )}
@@ -452,97 +389,6 @@ const Settings = ({ user, onUserUpdate, onBack, onLogout }) => {
           
         </div>
       </div>
-
-      {/* Two-Factor Authentication Modal */}
-      {showTwoFactorModal && (
-        <div className="modal-overlay" onClick={() => setShowTwoFactorModal(false)}>
-          <motion.div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="modal-header">
-              <h2>Enable Two-Factor Authentication</h2>
-              <button 
-                className="modal-close"
-                onClick={() => setShowTwoFactorModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <p className="modal-description">
-                To enable Two-Factor Authentication, please verify your identity by selecting a method and entering the verification code.
-              </p>
-
-              <div className="verification-methods">
-                <label className="method-option">
-                  <input
-                    type="radio"
-                    name="method"
-                    value="email"
-                    checked={twoFactorMethod === 'email'}
-                    onChange={() => setTwoFactorMethod('email')}
-                  />
-                  <span className="method-label">
-                    <span className="method-icon"></span>
-                    <span>Email ({profileData.email})</span>
-                  </span>
-                </label>
-                <label className="method-option">
-                  <input
-                    type="radio"
-                    name="method"
-                    value="phone"
-                    checked={twoFactorMethod === 'phone'}
-                    onChange={() => setTwoFactorMethod('phone')}
-                  />
-                  <span className="method-label">
-                    <span className="method-icon"></span>
-                    <span>Phone ({profileData.phone})</span>
-                  </span>
-                </label>
-              </div>
-
-              {!verificationSuccess ? (
-                <button 
-                  className="btn btn-primary full-width"
-                  onClick={handleSendVerificationCode}
-                >
-                  Send Verification Code
-                </button>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="verificationCode">Enter Verification Code</label>
-                    <input
-                      type="text"
-                      id="verificationCode"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="Enter 6-digit code"
-                      className={verificationError ? 'error' : ''}
-                      maxLength={6}
-                    />
-                    {verificationError && <span className="error-text">{verificationError}</span>}
-                  </div>
-
-                  <button 
-                    className="btn btn-primary full-width"
-                    onClick={handleVerifyCode}
-                    disabled={verificationCode.length !== 6}
-                  >
-                    Verify & Enable 2FA
-                  </button>
-                </>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* Password Change Modal */}
       {showPasswordModal && (
