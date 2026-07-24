@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 from mongoengine import connect
 from werkzeug.utils import secure_filename
 
+import smtplib
+from email.mime.text import MIMEText
+
 # Import the JWT verification decorator from the middleware file
 from auth_middleware import jwt_required
 
@@ -22,7 +25,6 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
 # Initialize bcrypt
 bcrypt = Bcrypt()
-
 
 def create_app():
     app = Flask(__name__)
@@ -242,8 +244,41 @@ def create_app():
                 frontend_base_url = request_origin if request_origin in frontend_origins else 'http://localhost:5173'
             reset_link = f"{frontend_base_url}/?resetToken={reset_token}"
 
-            # Development behavior: log reset link on server console.
-            print(f"🔗 Password reset link for {email}: {reset_link}")
+            # Send reset link through Gmail
+            try:
+                sender_email = os.getenv("MAIL_USERNAME")
+                sender_password = os.getenv("MAIL_PASSWORD")
+
+                subject = "Heart Lens Password Reset"
+                body = f"""
+Hello,
+
+You requested a password reset.
+
+Click the link below to reset your password:
+
+{reset_link}
+
+This link will expire in 30 minutes.
+
+If you did not request this, ignore this email.
+"""
+
+                msg = MIMEText(body)
+                msg["Subject"] = subject
+                msg["From"] = sender_email
+                msg["To"] = email
+
+                server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.starttls()
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, email, msg.as_string())
+                server.quit()
+
+                print("✅ Password reset email sent successfully")
+
+            except Exception as e:
+                print(f"❌ Email sending failed: {str(e)}")
 
             return jsonify({
                 'msg': 'If that email exists, a reset link has been sent.',
@@ -309,6 +344,37 @@ def create_app():
         return jsonify([record.to_dict() for record in records])
 
 
+    @app.route('/api/auth/change-password', methods=['POST'])
+    @jwt_required
+    def change_password(current_user):
+        """
+        Change the authenticated user's password after verifying the current password.
+        """
+        try:
+            data = request.get_json() or {}
+            current_password = data.get('current_password') or data.get('currentPassword')
+            new_password = data.get('new_password') or data.get('newPassword')
+
+            if not current_password or not new_password:
+                return jsonify({'msg': 'Current password and new password are required'}), 400
+
+            if len(new_password) < 6:
+                return jsonify({'msg': 'Password must be at least 6 characters long'}), 400
+
+            if not current_user.check_password(current_password):
+                return jsonify({'msg': 'Current password is incorrect'}), 401
+
+            current_user.set_password(new_password)
+            current_user.save()
+
+            print(f"✅ Password updated successfully for user: {current_user.email}")
+            return jsonify({'msg': 'Password updated successfully. Please log in again.'}), 200
+
+        except Exception as e:
+            print(f"❌ Change password failed: {str(e)}")
+            return jsonify({'msg': 'Unable to update password right now'}), 500
+
+
     @app.route('/api/records', methods=['POST'])
     @jwt_required
     def create_record(current_user):
@@ -362,31 +428,31 @@ def create_app():
 
             if 'image' not in request.files:
                 return jsonify({'msg': 'No image file provided'}), 400
-            
+
             image_file = request.files['image']
             if image_file.filename == '':
                 return jsonify({'msg': 'No image file selected'}), 400
 
             if not is_allowed_eye_image(image_file):
                 return jsonify({'msg': 'Invalid file type. Upload retinal images in JPG or PNG format only.'}), 400
-            
+
             # Save the uploaded image to disk
             original_filename = secure_filename(image_file.filename)
             timestamp = datetime.utcnow().timestamp()
             # Create unique filename with timestamp
             filename = f"{current_user.id}_{timestamp}_{original_filename}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            
+
             # Save file to uploads folder
             image_file.save(filepath)
-            
+
             # Read image bytes for prediction
             with open(filepath, 'rb') as f:
                 image_bytes = f.read()
-            
+
             # Make prediction
             prediction = predict_from_image(image_bytes)
-            
+
             # Save to database with actual file path
             record = HealthRecord(
                 user=current_user,
@@ -396,13 +462,13 @@ def create_app():
                 image_url=filename  # Store just the filename, not full path
             )
             record.save()
-            
+
             return jsonify({
                 'success': True,
                 'prediction': prediction,
                 'record_id': str(record.id)
             }), 200
-        
+
         except Exception as e:
             print(f"❌ Image prediction error: {str(e)}")
             return jsonify({'msg': f'Prediction failed: {str(e)}'}), 500
